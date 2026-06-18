@@ -27,7 +27,7 @@ export function FinalResult({
         <div className="result-grid">
           <span>Tiempo total</span>
           <strong>{totals.playerTime}s</strong>
-          <span>Mejor solucion</span>
+          <span>Mejor solución</span>
           <strong>{totals.optimalTime}s</strong>
         </div>
         <div className="level-summary">

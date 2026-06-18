@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/icon.svg"],
       manifest: {
-        name: "Al rescate! Ayuda a Bomberos a llegar a tiempo",
-        short_name: "Al rescate",
-        description: "Juego educativo de rutas y optimizacion para emergencias.",
+        name: "Bomberos al rescate",
+        short_name: "Bomberos al rescate",
+        description: "Juego educativo de rutas y optimización para emergencias.",
         theme_color: "#0b3a66",
         background_color: "#f7fafc",
         display: "standalone",

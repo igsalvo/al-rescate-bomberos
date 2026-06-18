@@ -14,8 +14,8 @@ export function Timer({ running, resetKey }: { running: boolean; resetKey: strin
   }, [running]);
 
   return (
-    <div className="timer" aria-live="polite" aria-label={`Tiempo de decision ${seconds} segundos`}>
-      <span>Decision</span>
+    <div className="timer" aria-live="polite" aria-label={`Tiempo de decisión ${seconds} segundos`}>
+      <span>Decisión</span>
       <strong>{seconds}s</strong>
     </div>
   );
