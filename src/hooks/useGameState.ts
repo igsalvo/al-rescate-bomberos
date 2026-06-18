@@ -55,14 +55,14 @@ export function useGameState() {
     const gap = Math.max(0, Math.round((playerTime - optimalTime) * 10) / 10);
     const explanation =
       gap <= 1
-        ? "Tu decision fue muy cercana a la mejor alternativa disponible."
+        ? "Tu decisión fue muy cercana a la mejor alternativa disponible."
         : obstacles.includes("traffic")
-          ? `El trafico aumento el tiempo. Una mejor ruta ahorraba ${gap} segundos.`
+          ? `El tráfico aumentó el tiempo. Una mejor ruta ahorraba ${gap} segundos.`
           : obstacles.includes("closed")
-            ? "La calle cerrada obliga a buscar un desvio disponible."
+            ? "La calle cerrada obliga a buscar un desvío disponible."
             : obstacles.includes("rain")
-              ? `La lluvia aumento el tiempo de viaje. Una mejor ruta ahorraba ${gap} segundos.`
-              : `Una mejor ruta permitia ahorrar ${gap} segundos.`;
+              ? `La lluvia aumentó el tiempo de viaje. Una mejor ruta ahorraba ${gap} segundos.`
+              : `Una mejor ruta permitía ahorrar ${gap} segundos.`;
 
     const result: LevelResultData = {
       levelId: params.level.id,

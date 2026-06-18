@@ -176,7 +176,7 @@ export function GameMap({
   const handleManualMove = (point: Point) => {
     const candidate = nearestNode(point);
     if (!candidate || candidate.distance > 58) {
-      setInvalid("Acercate a una interseccion.");
+      setInvalid("Acércate a una intersección.");
       return;
     }
     const current = manualPath[manualPath.length - 1];
@@ -187,7 +187,7 @@ export function GameMap({
       return;
     }
     if (!isValidMove(current, candidate.id)) {
-      setInvalid("Esa calle esta cerrada o va en otro sentido.");
+      setInvalid("Esa calle está cerrada o va en otro sentido.");
       onBeep("blocked");
       return;
     }
@@ -237,7 +237,7 @@ export function GameMap({
           className={`city-map ${dragging ? "dragging" : ""} ${invalid ? "invalid" : ""}`}
           viewBox={`0 0 ${viewBox.width} ${viewBox.height}`}
           role="img"
-          aria-label="Mapa con estaciones, calles, obstaculos y emergencia"
+          aria-label="Mapa con estaciones, calles, obstáculos y emergencia"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -287,7 +287,7 @@ export function GameMap({
               <g key={station.id} className="station-pin" transform={`translate(${station.position.x} ${station.position.y})`}>
                 <rect x="-33" y="-36" width="66" height="48" rx="8" />
                 <text y="-7" textAnchor="middle">
-                  {station.name.replace("Compania ", "")}
+                  {station.name.replace("Compañía ", "")}
                 </text>
               </g>
             ))}
@@ -305,7 +305,7 @@ export function GameMap({
         <p>{level.briefing}</p>
 
         <div className="choice-group">
-          <span>Compania</span>
+          <span>Compañía</span>
           {availableStations.map((station) => (
             <StationButton
               key={station.id}
@@ -402,7 +402,7 @@ export function GameMap({
         {level.weather === "rain" ? (
           <div className="weather-note">
             <CloudRain aria-hidden="true" />
-            Lluvia: los tramos tardan 30% mas.
+            Lluvia: los tramos tardan 30% más.
           </div>
         ) : null}
       </aside>

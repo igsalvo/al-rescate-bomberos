@@ -32,16 +32,16 @@ export function LevelResult({
           <strong>{result.optimalTime}s</strong>
           <span>Diferencia</span>
           <strong>{Math.max(0, Math.round((result.playerTime - result.optimalTime) * 10) / 10)}s</strong>
-          <span>Decision</span>
+          <span>Decisión</span>
           <strong>{result.decisionTime}s</strong>
-          <span>Compania</span>
+          <span>Compañía</span>
           <strong>{result.companyName}</strong>
           <span>Carro</span>
           <strong>{result.truckName}</strong>
         </div>
         <p className="explanation">{result.explanation}</p>
         <div className="mini-list">
-          {result.obstacles.length ? result.obstacles.map((item) => <span key={item}>{OBSTACLE_LABELS[item]}</span>) : <span>Sin obstaculos importantes</span>}
+          {result.obstacles.length ? result.obstacles.map((item) => <span key={item}>{OBSTACLE_LABELS[item]}</span>) : <span>Sin obstáculos importantes</span>}
         </div>
         <div className="action-row">
           <button className="primary" type="button" onClick={onNext}>

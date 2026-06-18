@@ -12,13 +12,13 @@ export function DifficultySelector({
     <main className="screen compact-screen">
       <section className="panel intro-panel">
         <p className="eyebrow">Elegir dificultad</p>
-        <h1>Selecciona una mision</h1>
+        <h1>Selecciona una misión</h1>
         <div className="difficulty-grid">
           {levels.map((level) => (
             <button className="difficulty-card" type="button" key={level.id} onClick={() => onChoose(level.id)}>
               <strong>{level.title}</strong>
               <span>{level.subtitle}</span>
-              <small>{level.manualRouting ? "Recorrido manual" : "Rutas predisenadas"}</small>
+              <small>{level.manualRouting ? "Recorrido manual" : "Rutas prediseñadas"}</small>
             </button>
           ))}
         </div>

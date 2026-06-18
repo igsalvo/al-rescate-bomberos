@@ -2,9 +2,9 @@ import { ROUTE_COLORS } from "../config/theme";
 import type { FireStation, FireTruck, LevelConfig } from "./types";
 
 export const stations: FireStation[] = [
-  { id: "central", name: "Compania Central", position: { x: 90, y: 120 } },
-  { id: "parque", name: "Compania Parque", position: { x: 720, y: 125 } },
-  { id: "rio", name: "Compania Rio", position: { x: 145, y: 535 } }
+  { id: "central", name: "Compañía Central", position: { x: 90, y: 120 } },
+  { id: "parque", name: "Compañía Parque", position: { x: 720, y: 125 } },
+  { id: "rio", name: "Compañía Río", position: { x: 145, y: 535 } }
 ];
 
 export const trucks: FireTruck[] = [
@@ -26,7 +26,7 @@ export const trucks: FireTruck[] = [
   },
   {
     id: "q3",
-    name: "Quimico 3",
+    name: "Químico 3",
     stationId: "central",
     preparationTime: 5,
     status: "busy",
@@ -56,21 +56,21 @@ export const levels: LevelConfig[] = [
     targetNode: "n",
     manualRouting: false,
     weather: "clear",
-    briefing: "Arrastra el carro hacia una ruta. El camino corto puede tener mas trafico.",
+    briefing: "Arrastra el carro hacia una ruta. El camino corto puede tener más tráfico.",
     routeOptions: [
       {
         id: "corta",
         name: "Ruta corta",
         color: ROUTE_COLORS.orange,
         edgeIds: ["a-b", "b-c", "c-d", "d-i", "i-n"],
-        hint: "Mas directa, pero con trafico y trabajos."
+        hint: "Más directa, pero con tráfico y trabajos."
       },
       {
         id: "avenida",
         name: "Ruta avenida",
         color: ROUTE_COLORS.blue,
         edgeIds: ["a-f", "f-g", "g-h", "h-i", "i-n"],
-        hint: "Un poco mas larga, con tramos rapidos."
+        hint: "Un poco más larga, con tramos rápidos."
       },
       {
         id: "barrio",
@@ -94,28 +94,28 @@ export const levels: LevelConfig[] = [
     targetNode: "m",
     manualRouting: false,
     weather: "clear",
-    briefing: "Elige compania, carro disponible y ruta. El mas cercano no siempre llega antes.",
+    briefing: "Elige compañía, carro disponible y ruta. El más cercano no siempre llega antes.",
     routeOptions: [
       {
         id: "centro",
         name: "Centro",
         color: ROUTE_COLORS.orange,
         edgeIds: ["a-b", "b-c", "c-h", "h-m"],
-        hint: "Directa, pero una calle esta cerrada."
+        hint: "Directa, pero una calle está cerrada."
       },
       {
         id: "ribera",
         name: "Ribera",
         color: ROUTE_COLORS.blue,
         edgeIds: ["a-f", "f-g", "g-l", "l-m"],
-        hint: "Mas estable y sin cierre."
+        hint: "Más estable y sin cierre."
       },
       {
         id: "parque",
         name: "Desde parque",
         color: ROUTE_COLORS.green,
         edgeIds: ["e-j", "j-o", "o-s", "r-s", "n-r", "m-n"],
-        hint: "Parte mas lejos, pero evita la zona cerrada."
+        hint: "Parte más lejos, pero evita la zona cerrada."
       }
     ]
   },
@@ -132,7 +132,7 @@ export const levels: LevelConfig[] = [
     targetNode: "s",
     manualRouting: true,
     weather: "rain",
-    briefing: "Construye el recorrido por la red. Respeta cierres y sentidos del transito."
+    briefing: "Construye el recorrido por la red. Respeta cierres y sentidos del tránsito."
   }
 ];
 

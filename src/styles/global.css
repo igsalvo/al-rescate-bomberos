@@ -101,14 +101,17 @@ svg {
   flex-wrap: wrap;
 }
 
-.logo-slot {
-  width: 84px;
-  height: 52px;
-  border: 2px dashed rgba(255, 255, 255, 0.75);
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-weight: 900;
+.brand-logo {
+  width: min(270px, 55vw);
+  height: auto;
+  object-fit: contain;
+}
+
+.brand-row {
+  position: fixed;
+  top: clamp(10px, 2vw, 22px);
+  left: clamp(10px, 2vw, 22px);
+  z-index: 1;
 }
 
 .start-content h1 {

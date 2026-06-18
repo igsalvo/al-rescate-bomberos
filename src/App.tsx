@@ -53,18 +53,11 @@ export default function App() {
 
   return (
     <StartScreen
-      mode={game.mode}
-      setMode={game.setMode}
-      teamName={game.teamName}
-      setTeamName={game.setTeamName}
-      soundEnabled={audio.enabled}
-      setSoundEnabled={audio.setSound}
       onStart={() => {
         audio.ensureAudio();
         audio.beep("alarm");
         game.startComplete();
       }}
-      onDifficulty={() => game.setScreen("difficulty")}
     />
   );
 }

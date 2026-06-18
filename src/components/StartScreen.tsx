@@ -1,25 +1,7 @@
-import { Route, Shield, Users, Volume2 } from "lucide-react";
-import type { GameMode } from "../game/types";
-import { AudioControls } from "./AudioControls";
-
 export function StartScreen({
-  mode,
-  setMode,
-  teamName,
-  setTeamName,
-  soundEnabled,
-  setSoundEnabled,
-  onStart,
-  onDifficulty
+  onStart
 }: {
-  mode: GameMode;
-  setMode: (mode: GameMode) => void;
-  teamName: string;
-  setTeamName: (name: string) => void;
-  soundEnabled: boolean;
-  setSoundEnabled: (enabled: boolean) => void;
   onStart: () => void;
-  onDifficulty: () => void;
 }) {
   return (
     <main className="start-screen">
@@ -38,51 +20,20 @@ export function StartScreen({
       </section>
       <section className="start-content">
         <div className="brand-row">
-          <div className="logo-slot">Logo</div>
-          <span>Ingenieria Industrial · Universidad de Chile</span>
+          <img
+            className="brand-logo"
+            src="https://res.cloudinary.com/drtluusdh/image/upload/v1781277030/Sin_ti%CC%81tulo_1080_x_400_px_igyvfv.png"
+            alt="Ingeniería Industrial, Universidad de Chile"
+          />
         </div>
-        <h1>¡Al rescate! Ayuda a Bomberos a llegar a tiempo</h1>
-        <p className="subtitle">¿Podras elegir el carro y la ruta mas rapida?</p>
-        <p>Selecciona un carro, elige una ruta y llega a la emergencia lo antes posible. Observa el trafico, los cortes de calle y otros obstaculos.</p>
-
-        <div className="mode-switch" role="group" aria-label="Modalidad">
-          <button className={mode === "individual" ? "selected" : ""} type="button" onClick={() => setMode("individual")}>
-            Individual
-          </button>
-          <button className={mode === "team" ? "selected" : ""} type="button" onClick={() => setMode("team")}>
-            Equipo
-          </button>
-        </div>
-        {mode === "team" ? (
-          <label className="team-input">
-            Nombre del equipo
-            <input value={teamName} onChange={(event) => setTeamName(event.target.value)} maxLength={28} placeholder="Opcional" />
-          </label>
-        ) : null}
-
-        <div className="instruction-row">
-          <span>
-            <Shield aria-hidden="true" /> Elige carro
-          </span>
-          <span>
-            <Route aria-hidden="true" /> Decide ruta
-          </span>
-          <span>
-            <Users aria-hidden="true" /> Aprende jugando
-          </span>
-          <span>
-            <Volume2 aria-hidden="true" /> Sonidos suaves
-          </span>
-        </div>
+        <h1>Bomberos al rescate</h1>
+        <p className="subtitle">¿Podrás elegir el carro y la ruta más rápida?</p>
+        <p>Selecciona un carro, elige una ruta y llega a la emergencia lo antes posible. Observa el tráfico, los cortes de calle y otros obstáculos.</p>
 
         <div className="action-row">
           <button className="primary" type="button" onClick={onStart}>
-            Jugar recorrido completo
+            Jugar
           </button>
-          <button className="secondary" type="button" onClick={onDifficulty}>
-            Elegir dificultad
-          </button>
-          <AudioControls enabled={soundEnabled} onChange={setSoundEnabled} />
         </div>
       </section>
     </main>
