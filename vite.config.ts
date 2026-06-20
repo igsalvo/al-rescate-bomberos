@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icons/icon.svg"],
+      includeAssets: ["icons/icon.svg", "logo-ingenieria-industrial.png"],
       manifest: {
         name: "Desafíos de Ingeniería Industrial",
         short_name: "Desafíos II",
