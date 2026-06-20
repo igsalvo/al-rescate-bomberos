@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { cityEdges } from "../game/graph";
 import { edgeCost, isValidMove, pathCost, shortestPath } from "../game/pathfinding";
 import { calculateScore, starsForScore } from "../game/scoring";
+import { games } from "../config/games";
+import { championProbabilities, energyTotal, hospitalImpact, optimalKnapsack, scoreToStars, spreadFire } from "../game/common";
 
 describe("calculo de tiempos", () => {
   it("aplica penalizaciones por trafico y trabajos", () => {
@@ -14,6 +16,42 @@ describe("calculo de tiempos", () => {
   it("aumenta el tiempo con lluvia", () => {
     const normal = cityEdges.find((edge) => edge.id === "a-b")!;
     expect(edgeCost(normal, "rain")).toBe(5.2);
+  });
+});
+
+describe("plataforma de juegos", () => {
+  it("define diez rutas únicas y habilitadas en el catálogo", () => {
+    expect(games).toHaveLength(10);
+    expect(new Set(games.map((game) => game.slug)).size).toBe(10);
+    expect(games.every((game) => game.enabled)).toBe(true);
+  });
+
+  it("aplica la escala común de estrellas", () => {
+    expect(scoreToStars(900)).toBe(3);
+    expect(scoreToStars(700)).toBe(2);
+    expect(scoreToStars(699)).toBe(1);
+  });
+
+  it("bloquea la propagación en un cortafuego", () => {
+    const burned = spreadFire([["fire", "forest", "home"]], new Set(["1,0"]), 3);
+    expect(burned.has("2,0")).toBe(false);
+  });
+
+  it("calcula consumo energético activo", () => {
+    expect(energyTotal([{ consumption: 30, active: true }, { consumption: 20, active: false }])).toBe(30);
+  });
+
+  it("normaliza probabilidades de campeonato", () => {
+    const probabilities = championProbabilities([{ attack: 90, defense: 80, form: 70 }, { attack: 70, defense: 80, form: 90 }]);
+    expect(probabilities.reduce((sum, value) => sum + value, 0)).toBe(100);
+  });
+
+  it("resuelve la utilidad del problema de mochila", () => {
+    expect(optimalKnapsack([{ weight: 3, utility: 5 }, { weight: 4, utility: 8 }, { weight: 2, utility: 3 }], 6)).toBe(11);
+  });
+
+  it("combina demanda y capacidad hospitalaria", () => {
+    expect(hospitalImpact({ waiting: 40, beds: 2, staff: 4 })).toBe(6);
   });
 });
 

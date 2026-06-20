@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Check, CloudRain, RotateCcw, Send, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, CloudRain, RotateCcw, Send, ShieldAlert } from "lucide-react";
 import { OBSTACLE_LABELS } from "../config/content";
 import { cityEdges, cityNodes } from "../game/graph";
 import { stations, trucks } from "../game/levels";
@@ -34,6 +34,8 @@ export function GameMap({
   startSiren,
   stopSiren,
   reducedMotion,
+  onBack,
+  onRestart,
   onFinish
 }: {
   level: LevelConfig;
@@ -43,6 +45,8 @@ export function GameMap({
   startSiren: () => void;
   stopSiren: () => void;
   reducedMotion: boolean;
+  onBack: () => void;
+  onRestart: () => void;
   onFinish: (params: { stationId: string; truckId: string; routeName: string; path: string[]; decisionTime: number }) => void;
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -225,11 +229,13 @@ export function GameMap({
     <main className="game-layout">
       <section className="map-shell" aria-label="Mapa de ciudad ficticia">
         <div className="map-topbar">
+          <button className="icon-button" type="button" onClick={onBack}><ArrowLeft aria-hidden="true" /> Juegos</button>
           <Timer running={!isAnimating} resetKey={level.id} />
           <div className="travel-pill" aria-live="polite">
             Viaje: <strong>{travelTime}s</strong>
           </div>
           <AudioControls enabled={soundEnabled} onChange={setSoundEnabled} />
+          <button className="icon-button" type="button" onClick={onRestart}><RotateCcw aria-hidden="true" /> Reiniciar</button>
         </div>
         {level.weather === "rain" ? <div className="rain-layer" aria-hidden="true" /> : null}
         <svg

@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/icon.svg"],
       manifest: {
-        name: "Bomberos al rescate",
-        short_name: "Bomberos al rescate",
-        description: "Juego educativo de rutas y optimización para emergencias.",
+        name: "Desafíos de Ingeniería Industrial",
+        short_name: "Desafíos II",
+        description: "Minijuegos educativos de datos, simulación y optimización.",
         theme_color: "#0b3a66",
         background_color: "#f7fafc",
         display: "standalone",

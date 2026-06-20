@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from "react";
 type SoundName = "select" | "blocked" | "arrival" | "result" | "alarm";
 
 export function useAudio() {
-  const [enabled, setEnabled] = useState(() => localStorage.getItem("al-rescate-sound") !== "off");
+  const [enabled, setEnabled] = useState(() => localStorage.getItem("industrial-games-sound") !== "off");
   const audioContext = useRef<AudioContext | null>(null);
   const siren = useRef<OscillatorNode | null>(null);
 
@@ -17,7 +17,7 @@ export function useAudio() {
 
   const setSound = useCallback((value: boolean) => {
     setEnabled(value);
-    localStorage.setItem("al-rescate-sound", value ? "on" : "off");
+    localStorage.setItem("industrial-games-sound", value ? "on" : "off");
   }, []);
 
   const beep = useCallback(
