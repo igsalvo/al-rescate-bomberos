@@ -18,6 +18,25 @@ export const spreadFire = (board: FireCell[][], breaks: Set<string>, steps = 3) 
   return burning;
 };
 
+export const fireSpreadFrames = (board: FireCell[][], breaks: Set<string>, steps = 5) => {
+  let burning = new Set<string>();
+  board.forEach((row, y) => row.forEach((cell, x) => cell === "fire" && burning.add(`${x},${y}`)));
+  const frames = [new Set(burning)];
+  for (let step = 0; step < steps; step += 1) {
+    const next = new Set(burning);
+    burning.forEach((key) => {
+      const [x, y] = key.split(",").map(Number);
+      [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].forEach(([nx, ny]) => {
+        if (board[ny]?.[nx] && !breaks.has(`${nx},${ny}`)) next.add(`${nx},${ny}`);
+      });
+    });
+    if (next.size === burning.size) break;
+    burning = next;
+    frames.push(new Set(burning));
+  }
+  return frames;
+};
+
 export const energyTotal = (services: Array<{ consumption: number; active: boolean }>) =>
   services.reduce((sum, service) => sum + (service.active ? service.consumption : 0), 0);
 

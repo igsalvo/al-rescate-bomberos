@@ -3,7 +3,7 @@ import { cityEdges } from "../game/graph";
 import { edgeCost, isValidMove, pathCost, shortestPath } from "../game/pathfinding";
 import { calculateScore, starsForScore } from "../game/scoring";
 import { games } from "../config/games";
-import { championProbabilities, energyTotal, hospitalImpact, optimalKnapsack, scoreToStars, spreadFire } from "../game/common";
+import { championProbabilities, energyTotal, fireSpreadFrames, hospitalImpact, optimalKnapsack, scoreToStars, spreadFire } from "../game/common";
 
 describe("calculo de tiempos", () => {
   it("aplica penalizaciones por trafico y trabajos", () => {
@@ -35,6 +35,11 @@ describe("plataforma de juegos", () => {
   it("bloquea la propagación en un cortafuego", () => {
     const burned = spreadFire([["fire", "forest", "home"]], new Set(["1,0"]), 3);
     expect(burned.has("2,0")).toBe(false);
+  });
+
+  it("genera fotogramas progresivos para animar el incendio", () => {
+    const frames = fireSpreadFrames([["fire", "forest", "forest", "home"]], new Set(), 4);
+    expect(frames.map((frame) => frame.size)).toEqual([1, 2, 3, 4]);
   });
 
   it("calcula consumo energético activo", () => {
