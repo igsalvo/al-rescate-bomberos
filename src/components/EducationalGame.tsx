@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { GameDefinition } from "../config/games";
 import { championProbabilities, clampScore, energyTotal, hospitalImpact, optimalKnapsack, spreadFire, type FireCell } from "../game/common";
 import { CommonResult } from "./CommonResult";
+import { RaceStrategyGame } from "./RaceStrategyGame";
 
 type Result = { score: number; title: string; metrics: Array<[string, string | number]>; explanation: string };
 const fireBoard: FireCell[][] = [["forest","forest","nature","home","home"],["fire","forest","forest","forest","home"],["forest","nature","forest","forest","forest"],["nature","nature","forest","home","home"]];
@@ -29,7 +30,7 @@ export function EducationalGame({ game, onHome }: { game: GameDefinition; onHome
 
 function GameBody({ game, finish }: { game: GameDefinition; finish: (result: Result) => void }) {
   if (game.id === "incendio") return <FireGame finish={finish} />;
-  if (game.id === "formula-1") return <RaceGame finish={finish} />;
+  if (game.id === "formula-1") return <RaceStrategyGame finish={finish} />;
   if (game.id === "detective-datos") return <DetectiveGame finish={finish} />;
   if (game.id === "campeon") return <ChampionGame finish={finish} />;
   if (game.id === "energia") return <EnergyGame finish={finish} />;
@@ -46,12 +47,6 @@ function FireGame({ finish }: { finish: (result: Result) => void }) {
   const toggle = (key: string) => setBreaks(current => { const next = new Set(current); if (next.has(key)) next.delete(key); else if (next.size < 4) next.add(key); return next; });
   const simulate = () => { setSimulating(true); const burned = spreadFire(fireBoard, breaks); let homes = 0, nature = 0; fireBoard.forEach((row,y) => row.forEach((cell,x) => { if (!burned.has(`${x},${y}`) && cell === "home") homes++; if (!burned.has(`${x},${y}`) && cell === "nature") nature++; })); const score = clampScore(420 + homes * 80 + nature * 55); finishAfter({ score, title: score >= 800 ? "Buena ubicación" : "Prueba otra estrategia", metrics: [["Viviendas protegidas", homes],["Áreas naturales protegidas", nature],["Superficie afectada", `${burned.size} zonas`],["Referencia", "4 cortafuegos bien distribuidos"]], explanation: "El fuego avanzó por celdas vecinas y se detuvo donde instalaste barreras." }, 850); };
   return <section className={`play-panel ${simulating ? "is-simulating" : ""}`}><div className="panel-heading"><div><h2>Ubica 4 cortafuegos</h2><p>Viento hacia el este →. Selecciona celdas antes de iniciar.</p></div><span>{breaks.size}/4</span></div><div className="fire-board">{fireBoard.flatMap((row,y) => row.map((cell,x) => { const key=`${x},${y}`; return <button type="button" disabled={simulating} aria-label={`${cell}, ${breaks.has(key) ? "con" : "sin"} cortafuego`} className={`${cell} ${breaks.has(key) ? "firebreak" : ""}`} onClick={() => cell !== "fire" && toggle(key)} key={key}>{breaks.has(key) ? "🧱" : cell === "home" ? "🏠" : cell === "nature" ? "🦌" : cell === "fire" ? "🔥" : "🌲"}</button>; }))}</div><div className="decision-footer"><span>{simulating ? "Simulando propagación…" : `${4-breaks.size} piezas disponibles`}</span><button className="primary" disabled={breaks.size < 3 || simulating} onClick={simulate}>{simulating ? "Simulando…" : "Iniciar simulación"}</button></div></section>;
-}
-
-function RaceGame({ finish }: { finish: (result: Result) => void }) {
-  const [lap, setLap] = useState(1); const [wear, setWear] = useState(8); const [pit, setPit] = useState<number | null>(null);
-  const advance = (stop: boolean) => { const chosen = stop && pit === null ? lap : pit; if (stop) setPit(lap); if (lap === 10) { const best = 6; const diff = Math.abs((chosen ?? 10) - best); finish({ score: clampScore(1000-diff*115), title: diff <= 1 ? "Gran estrategia" : "Había una parada más eficiente", metrics: [["Posición final", `${Math.min(8,2+diff)}.ª`],["Tiempo total", `${612+diff*8}s`],["Entrada a boxes", `Vuelta ${chosen ?? 10}`],["Mejor estrategia", "Vuelta 6"]], explanation: "Parar muy pronto obliga a cuidar neumáticos; parar tarde aumenta la pérdida por desgaste." }); return; } setLap(value => value + 1); setWear(stop ? 5 : Math.min(100, wear + 10 + (lap >= 7 ? 5 : 0))); };
-  return <section className="play-panel"><div className="panel-heading"><div><h2>Vuelta {lap} de 10</h2><p>Evalúa desgaste y eventos antes de decidir.</p></div><span>{lap*10}%</span></div><div className="race-track"><div className="race-car" style={{ left: `${8 + lap * 7.5}%` }}>🏎️</div><span>{pit ? `Parada realizada en vuelta ${pit}` : "Aún no entras a boxes"}</span></div><label>Desgaste de neumáticos <progress max="100" value={wear}/><strong>{wear}%</strong></label><p className="event-card" key={lap}>{lap === 4 ? "🌧️ Comienza una lluvia leve" : lap === 6 ? "🚩 Un rival entra a boxes" : lap === 8 ? "⚠️ Neumáticos muy desgastados" : "Pista despejada"}</p><div className="action-row"><button className="primary" disabled={pit !== null} onClick={() => advance(true)}>Entrar ahora</button><button className="secondary" onClick={() => advance(false)}>{lap === 10 ? "Terminar carrera" : "Esperar una vuelta"}</button></div></section>;
 }
 
 function DetectiveGame({ finish }: { finish: (result: Result) => void }) {
