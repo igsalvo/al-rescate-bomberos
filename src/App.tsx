@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { DifficultySelector } from "./components/DifficultySelector";
 import { EducationalGame } from "./components/EducationalGame";
 import { FinalResult } from "./components/FinalResult";
@@ -13,16 +13,20 @@ import { useAudio } from "./hooks/useAudio";
 import { useGameState } from "./hooks/useGameState";
 import { useReducedMotion } from "./hooks/useReducedMotion";
 import { navigate } from "./lib/router";
+import { InstructionModal } from "./components/InstructionModal";
+import { gameInstructions } from "./config/instructions";
 import "./styles/global.css";
 
 function BomberosGame({ audio, onCatalog }: { audio: ReturnType<typeof useAudio>; onCatalog: () => void }) {
   const game = useGameState();
   const reducedMotion = useReducedMotion();
-  if (game.screen === "difficulty") return <><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onCatalog} onRestart={game.resetAll}/><DifficultySelector onChoose={game.chooseDifficulty} onBack={() => game.setScreen("start")} /></>;
-  if (game.screen === "playing") return <GameMap key={game.level.id} level={game.level} soundEnabled={audio.enabled} setSoundEnabled={audio.setSound} onBeep={audio.beep} startSiren={audio.startSiren} stopSiren={audio.stopSiren} reducedMotion={reducedMotion} onBack={onCatalog} onRestart={game.resetAll} onFinish={(params) => game.finishLevel({ ...params, level: game.level })} />;
-  if (game.screen === "levelResult" && game.latestResult) return <><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onCatalog} onRestart={game.resetAll}/><LevelResult result={game.latestResult} hasNext={game.completeRun && game.results.length < levels.length} onNext={game.nextLevel} onRetry={game.retryLevel} onHome={onCatalog} /></>;
-  if (game.screen === "finalResult") return <><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onCatalog} onRestart={game.resetAll}/><FinalResult results={game.results} totals={game.totals} onRestart={game.startComplete} onHome={onCatalog} /></>;
-  return <div className="with-floating-back"><button className="floating-back" type="button" onClick={onCatalog}>← Volver a juegos</button><StartScreen onStart={() => { audio.ensureAudio(); audio.beep("alarm"); game.startComplete(); }} /></div>;
+  const [instructionsOpen,setInstructionsOpen]=useState(true);
+  const wrap=(content:ReactNode)=><>{content}<button className="floating-help" type="button" onClick={()=>setInstructionsOpen(true)}>¿Cómo jugar?</button><InstructionModal open={instructionsOpen} title="¡Al rescate!" icon="🚒" instructions={gameInstructions.bomberos} onClose={()=>setInstructionsOpen(false)}/></>;
+  if (game.screen === "difficulty") return wrap(<><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onCatalog} onRestart={game.resetAll}/><DifficultySelector onChoose={game.chooseDifficulty} onBack={() => game.setScreen("start")} /></>);
+  if (game.screen === "playing") return wrap(<GameMap key={game.level.id} level={game.level} soundEnabled={audio.enabled} setSoundEnabled={audio.setSound} onBeep={audio.beep} startSiren={audio.startSiren} stopSiren={audio.stopSiren} reducedMotion={reducedMotion} onBack={onCatalog} onRestart={game.resetAll} onFinish={(params) => game.finishLevel({ ...params, level: game.level })} />);
+  if (game.screen === "levelResult" && game.latestResult) return wrap(<><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onCatalog} onRestart={game.resetAll}/><LevelResult result={game.latestResult} hasNext={game.completeRun && game.results.length < levels.length} onNext={game.nextLevel} onRetry={game.retryLevel} onHome={onCatalog} /></>);
+  if (game.screen === "finalResult") return wrap(<><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onCatalog} onRestart={game.resetAll}/><FinalResult results={game.results} totals={game.totals} onRestart={game.startComplete} onHome={onCatalog} /></>);
+  return wrap(<div className="with-floating-back"><button className="floating-back" type="button" onClick={onCatalog}>← Volver a juegos</button><StartScreen onStart={() => { audio.ensureAudio(); audio.beep("alarm"); game.startComplete(); }} /></div>);
 }
 
 export default function App() {

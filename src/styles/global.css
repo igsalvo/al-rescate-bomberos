@@ -802,3 +802,55 @@ blockquote {
     display: grid;
   }
 }
+
+/* Experiencia amigable, instrucciones y fuentes */
+.hero-benefits { display:flex; gap:.6rem 1.2rem; flex-wrap:wrap; margin-top:1.2rem; color:#bcd0dc; font-size:.76rem; font-weight:800; }
+.hero-benefits span { display:flex; align-items:center; gap:.35rem; }
+.hero-benefits svg { width:15px; }
+.section-heading small { display:block; margin-top:.35rem; color:var(--muted); font-size:.9rem; }
+.game-intro > div:nth-child(2) { flex:1; }
+.instructions-trigger { margin-left:auto; background:#fff; color:#174963; border:1px solid #cbdce3; white-space:nowrap; }
+.instructions-trigger:hover { background:#eaf5f6; border-color:#75adb7; }
+.floating-help { position:fixed; right:18px; bottom:18px; z-index:24; border-radius:999px; background:#f5c842; color:#092f4f; box-shadow:0 10px 28px rgba(0,0,0,.2); }
+.research-link { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin:1rem 0; padding:1rem 1.1rem; border-radius:14px; background:#0d3b59; color:white; text-decoration:none; transition:transform .18s,box-shadow .18s; }
+.research-link:hover { transform:translateY(-2px); box-shadow:0 12px 26px rgba(13,59,89,.2); }
+.research-link span { display:grid; gap:.2rem; }
+.research-link small { color:#7ed2d7; font-size:.63rem; letter-spacing:.1em; font-weight:1000; }
+.research-link strong { line-height:1.35; }
+.research-link svg { flex:0 0 auto; }
+.proposal-summary span { display:grid; gap:.2rem; }
+.proposal-summary small { color:#5f7280; font-weight:600; }
+.proposal-summary b { color:#123f5c; }
+
+body.modal-open { overflow:hidden; }
+.modal-backdrop { position:fixed; inset:0; z-index:100; display:grid; place-items:center; padding:18px; background:rgba(5,18,27,.72); backdrop-filter:blur(7px); animation:modal-fade .2s ease-out; }
+.instruction-modal { width:min(620px,100%); max-height:min(760px,calc(100vh - 36px)); overflow:auto; padding:clamp(1.2rem,4vw,2rem); border-radius:24px; background:#fff; color:#152b38; box-shadow:0 35px 90px rgba(0,0,0,.32); position:relative; animation:modal-in .28s cubic-bezier(.2,.8,.2,1); }
+.modal-close { position:absolute; right:14px; top:14px; width:42px; height:42px; padding:0; border-radius:50%; background:#edf2f3; color:#34505f; }
+.instruction-title { display:flex; align-items:center; gap:1rem; padding-right:44px; }
+.instruction-title > span { width:68px; height:68px; border-radius:18px; display:grid; place-items:center; background:#e9f3f2; font-size:2.25rem; }
+.instruction-title small { color:#b33339; font-size:.65rem; letter-spacing:.13em; font-weight:1000; }
+.instruction-title h2 { margin:.2rem 0; font-size:clamp(1.65rem,4vw,2.25rem); color:#0c3a57; }
+.instruction-objective { display:flex; gap:.8rem; margin:1.3rem 0; padding:1rem; border-radius:14px; background:#eaf5f5; color:#184d5f; }
+.instruction-objective svg { flex:0 0 auto; }
+.instruction-objective strong { display:block; }
+.instruction-objective p { margin:.2rem 0 0; line-height:1.45; }
+.instruction-modal ol { display:grid; gap:.6rem; padding:0; list-style:none; }
+.instruction-modal li { display:grid; grid-template-columns:36px 1fr 22px; align-items:center; gap:.7rem; padding:.7rem; border:1px solid #dfe7e9; border-radius:12px; }
+.instruction-modal li > span { width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:#123f5c; color:white; font-weight:1000; }
+.instruction-modal li p { margin:0; line-height:1.4; }
+.instruction-modal li svg { color:#40a879; }
+.instruction-tip { display:flex; align-items:flex-start; gap:.7rem; padding:.8rem 1rem; border-radius:12px; background:#fff5ce; color:#6a5310; }
+.instruction-tip p { margin:0; line-height:1.4; }
+.instruction-start { width:100%; margin-top:1rem; }
+@keyframes modal-fade { from { opacity:0; } }
+@keyframes modal-in { from { opacity:0; transform:translateY(18px) scale(.97); } }
+
+@media (max-width:700px) {
+  .game-intro { align-items:flex-start; flex-wrap:wrap; }
+  .instructions-trigger { width:100%; margin-left:0; }
+  .instruction-modal { border-radius:18px; padding:1.1rem; }
+  .instruction-title > span { width:54px; height:54px; font-size:1.8rem; }
+  .instruction-modal li { grid-template-columns:32px 1fr; }
+  .instruction-modal li svg { display:none; }
+  .hero-benefits { display:grid; }
+}

@@ -3,6 +3,9 @@ import type { GameDefinition } from "../config/games";
 import { championProbabilities, clampScore, energyTotal, fireSpreadFrames, hospitalImpact, optimalKnapsack, type FireCell } from "../game/common";
 import { CommonResult } from "./CommonResult";
 import { RaceStrategyGame } from "./RaceStrategyGame";
+import { InstructionModal } from "./InstructionModal";
+import { gameInstructions } from "../config/instructions";
+import { CircleHelp } from "lucide-react";
 
 type Result = { score: number; title: string; metrics: Array<[string, string | number]>; explanation: string };
 const fireBoard: FireCell[][] = [["forest","forest","nature","home","home"],["fire","forest","forest","forest","home"],["forest","nature","forest","forest","forest"],["nature","nature","forest","home","home"]];
@@ -20,11 +23,13 @@ function useDelayedFinish(finish: (result: Result) => void) {
 export function EducationalGame({ game, onHome }: { game: GameDefinition; onHome: () => void }) {
   const [run, setRun] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
-  const reset = () => { setResult(null); setRun(value => value + 1); };
+  const [instructionsOpen,setInstructionsOpen]=useState(true);
+  const reset = () => { setResult(null); setRun(value => value + 1); setInstructionsOpen(true); };
   return <main className="mini-game" key={run}>
     <div className="game-progress" aria-hidden="true"><span /></div>
-    <section className="game-intro"><div className="game-icon">{game.icon}</div><div><p className="eyebrow">{game.duration} · {game.categories.join(" · ")}</p><h1>{game.title}</h1><p>{game.fullDescription}</p></div></section>
-    {result ? <CommonResult {...result} learning={game.learning} onAgain={reset} onHome={onHome} /> : <GameBody game={game} finish={setResult} />}
+    <section className="game-intro"><div className="game-icon">{game.icon}</div><div><p className="eyebrow">{game.categories.join(" · ")}</p><h1>{game.title}</h1><p>{game.fullDescription}</p></div><button className="instructions-trigger" type="button" onClick={()=>setInstructionsOpen(true)}><CircleHelp aria-hidden="true"/> Cómo jugar</button></section>
+    {result ? <CommonResult {...result} learning={game.learning} researchUrl={game.researchUrl} researchTitle={game.researchTitle} onAgain={reset} onHome={onHome} /> : <GameBody game={game} finish={setResult} />}
+    <InstructionModal open={instructionsOpen} title={game.title} icon={game.icon} instructions={gameInstructions[game.id]} onClose={()=>setInstructionsOpen(false)}/>
   </main>;
 }
 
@@ -82,10 +87,10 @@ function SpaceGame({ finish }: { finish:(result:Result)=>void }) {
   const consensus=participantTotal !== null && participant>participantTotal; const weight=[...selected].reduce((sum,index)=>sum+spaceItems[index].weight,0); const utility=[...selected].reduce((sum,index)=>sum+spaceItems[index].utility,0); const optimum=optimalKnapsack(spaceItems,25);
   const toggle=(index:number)=>setSelected(current=>{const next=new Set(current);next.has(index)?next.delete(index):next.add(index);return next;});
   const confirm=()=>{setProposals(current=>[...current,new Set(selected)]);setSelected(new Set());setParticipant(value=>value+1);};
-  const submit=()=>{const individualUtilities=proposals.map(proposal=>[...proposal].reduce((sum,index)=>sum+spaceItems[index].utility,0));const bestIndividual=Math.max(...individualUtilities);setLaunching(true);finishAfter({score:clampScore(utility/optimum*1000),title:utility>=bestIndividual?"El consenso mejoró la decisión":"La mejor propuesta individual era superior",metrics:[["Peso utilizado",`${weight}/25`],["Utilidad grupal",utility],["Mejor decisión individual",bestIndividual],["Solución óptima",optimum]],explanation:`La nave despegó con una carga válida. El consenso ${utility>=bestIndividual?"mejoró o igualó":"empeoró"} la mejor propuesta individual.`},1800);};
+  const submit=()=>{const individualUtilities=proposals.map(proposal=>[...proposal].reduce((sum,index)=>sum+spaceItems[index].utility,0));const individualScores=individualUtilities.map(value=>clampScore(value/optimum*1000));const bestIndividual=Math.max(...individualUtilities);const groupScore=clampScore(utility/optimum*1000);const scoreMetrics:Array<[string,string|number]>=[...individualScores.map((score,index)=>[`Puntaje participante ${index+1}`,`${score} pts · utilidad ${individualUtilities[index]}`] as [string,string]),["Puntaje grupal",`${groupScore} pts · utilidad ${utility}`],["Peso grupal",`${weight}/25 kg`],["Solución óptima",`${optimum} de utilidad`]];setLaunching(true);finishAfter({score:groupScore,title:utility>=bestIndividual?"El consenso mejoró la decisión":"La mejor propuesta individual era superior",metrics:scoreMetrics,explanation:`La nave despegó con una carga válida. El consenso ${utility>=bestIndividual?"mejoró o igualó":"empeoró"} la mejor propuesta individual.`},1800);};
   if (participantTotal === null) return <section className="play-panel"><h2>¿Cuántas personas participan?</h2><p>Las decisiones individuales permanecerán ocultas hasta comenzar el consenso.</p><div className="participant-options">{[2,3,4,5].map(total=><button className="secondary" type="button" onClick={()=>setParticipantTotal(total)} key={total}>{total} participantes</button>)}</div></section>;
   return <section className={`play-panel space-simulation ${launching?"launching":""}`}><div className="space-scene" aria-label="Nave y carga seleccionada"><div className="stars-layer">✦ · ✧ · ✦ · ✧</div><div className="rocket">🚀<div className="cargo-window">{[...selected].slice(0,5).map(index=><span key={index}>{spaceItems[index].icon}</span>)}</div></div><div className="launch-pad"/><div className="rocket-flame">🔥</div></div><h2>{launching?"¡Despegue autorizado!":consensus?"Etapa 2: decisión por consenso":`Etapa 1: participante ${participant} de ${participantTotal}`}</h2><p>{launching?"La nave está verificando peso, utilidad y estabilidad.":consensus?"Las propuestas ya están visibles. Conversen y creen la carga final.":"Elige en privado y confirma. La selección se ocultará antes del siguiente turno."} {!launching&&<>Capacidad restante: <strong>{25-weight}</strong></>}</p>
-    {consensus&&<div className="proposal-summary">{proposals.map((proposal,index)=><span key={index}>Propuesta {index+1}: {[...proposal].map(item=>spaceItems[item].name).join(", ")}</span>)}</div>}
+    {consensus&&<div className="proposal-summary">{proposals.map((proposal,index)=>{const proposalUtility=[...proposal].reduce((sum,item)=>sum+spaceItems[item].utility,0);const proposalScore=clampScore(proposalUtility/optimum*1000);return <span key={index}><b>Participante {index+1} · {proposalScore} pts</b><small>{[...proposal].map(item=>spaceItems[item].name).join(", ")}</small></span>;})}</div>}
     <div className="cargo-meter"><span style={{width:`${Math.min(100,weight/25*100)}%`}}/><strong>{weight}/25 kg</strong></div><div className="space-grid">{spaceItems.map((item,index)=><button type="button" disabled={launching} aria-pressed={selected.has(index)} className={selected.has(index)?"selected":""} onClick={()=>toggle(index)} key={item.name}><span>{item.icon}</span><strong>{item.name}</strong><small>{item.weight} kg · utilidad {item.utility}</small></button>)}</div>
     <button className="primary" disabled={weight>25||selected.size===0||launching} onClick={consensus?submit:confirm}>{launching?"Despegando…":weight>25?"Exceso de peso":consensus?"Despegar":"Confirmar y ocultar"}</button></section>;
 }

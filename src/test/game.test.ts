@@ -3,6 +3,7 @@ import { cityEdges } from "../game/graph";
 import { edgeCost, isValidMove, pathCost, shortestPath } from "../game/pathfinding";
 import { calculateScore, starsForScore } from "../game/scoring";
 import { games } from "../config/games";
+import { gameInstructions } from "../config/instructions";
 import { championProbabilities, energyTotal, fireSpreadFrames, hospitalImpact, optimalKnapsack, scoreToStars, spreadFire } from "../game/common";
 
 describe("calculo de tiempos", () => {
@@ -24,6 +25,15 @@ describe("plataforma de juegos", () => {
     expect(games).toHaveLength(10);
     expect(new Set(games.map((game) => game.slug)).size).toBe(10);
     expect(games.every((game) => game.enabled)).toBe(true);
+  });
+
+  it("incluye instrucciones configurables para todos los juegos", () => {
+    expect(games.every((game) => gameInstructions[game.id]?.steps.length >= 3)).toBe(true);
+  });
+
+  it("vincula las investigaciones de F1 e incendios", () => {
+    expect(games.find((game) => game.id === "formula-1")?.researchUrl).toContain("isci.cl");
+    expect(games.find((game) => game.id === "incendio")?.researchUrl).toContain("dii.uchile.cl");
   });
 
   it("aplica la escala común de estrellas", () => {
