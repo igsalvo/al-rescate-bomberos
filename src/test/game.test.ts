@@ -4,6 +4,7 @@ import { edgeCost, isValidMove, pathCost, shortestPath } from "../game/pathfindi
 import { calculateScore, starsForScore } from "../game/scoring";
 import { games } from "../config/games";
 import { gameInstructions } from "../config/instructions";
+import { housingExamples, housingRounds } from "../config/housing";
 import { championProbabilities, energyTotal, fireSpreadFrames, hospitalImpact, optimalKnapsack, scoreToStars, spreadFire } from "../game/common";
 
 describe("calculo de tiempos", () => {
@@ -34,6 +35,12 @@ describe("plataforma de juegos", () => {
   it("vincula las investigaciones de F1 e incendios", () => {
     expect(games.find((game) => game.id === "formula-1")?.researchUrl).toContain("isci.cl");
     expect(games.find((game) => game.id === "incendio")?.researchUrl).toContain("dii.uchile.cl");
+  });
+
+  it("prepara tres ejemplos y cinco rondas de viviendas", () => {
+    expect(housingExamples).toHaveLength(3);
+    expect(housingRounds).toHaveLength(5);
+    expect(housingRounds.every((house) => house.factors.length >= 3)).toBe(true);
   });
 
   it("aplica la escala común de estrellas", () => {

@@ -6,6 +6,8 @@ import { RaceStrategyGame } from "./RaceStrategyGame";
 import { InstructionModal } from "./InstructionModal";
 import { gameInstructions } from "../config/instructions";
 import { CircleHelp } from "lucide-react";
+import { HousingValuationGame } from "./HousingValuationGame";
+import { useMultiplayer } from "../multiplayer/MultiplayerContext";
 
 type Result = { score: number; title: string; metrics: Array<[string, string | number]>; explanation: string };
 const fireBoard: FireCell[][] = [["forest","forest","nature","home","home"],["fire","forest","forest","forest","home"],["forest","nature","forest","forest","forest"],["nature","nature","forest","home","home"]];
@@ -21,14 +23,16 @@ function useDelayedFinish(finish: (result: Result) => void) {
 }
 
 export function EducationalGame({ game, onHome }: { game: GameDefinition; onHome: () => void }) {
+  const { submitScore } = useMultiplayer();
   const [run, setRun] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [instructionsOpen,setInstructionsOpen]=useState(true);
   const reset = () => { setResult(null); setRun(value => value + 1); setInstructionsOpen(true); };
+  const finish = (next: Result) => { setResult(next); void submitScore(game.id, next.score).catch(() => undefined); };
   return <main className="mini-game" key={run}>
     <div className="game-progress" aria-hidden="true"><span /></div>
     <section className="game-intro"><div className="game-icon">{game.icon}</div><div><p className="eyebrow">{game.categories.join(" · ")}</p><h1>{game.title}</h1><p>{game.fullDescription}</p></div><button className="instructions-trigger" type="button" onClick={()=>setInstructionsOpen(true)}><CircleHelp aria-hidden="true"/> Cómo jugar</button></section>
-    {result ? <CommonResult {...result} learning={game.learning} researchUrl={game.researchUrl} researchTitle={game.researchTitle} onAgain={reset} onHome={onHome} /> : <GameBody game={game} finish={setResult} />}
+    {result ? <CommonResult {...result} learning={game.learning} researchUrl={game.researchUrl} researchTitle={game.researchTitle} onAgain={reset} onHome={onHome} /> : <GameBody game={game} finish={finish} />}
     <InstructionModal open={instructionsOpen} title={game.title} icon={game.icon} instructions={gameInstructions[game.id]} onClose={()=>setInstructionsOpen(false)}/>
   </main>;
 }
@@ -40,7 +44,7 @@ function GameBody({ game, finish }: { game: GameDefinition; finish: (result: Res
   if (game.id === "campeon") return <ChampionGame finish={finish} />;
   if (game.id === "energia") return <EnergyGame finish={finish} />;
   if (game.id === "esperar") return <WaitingGame finish={finish} />;
-  if (game.id === "vivienda") return <HousingGame finish={finish} />;
+  if (game.id === "vivienda") return <HousingValuationGame finish={finish} />;
   if (game.id === "mision-espacial") return <SpaceGame finish={finish} />;
   return <HospitalGame finish={finish} />;
 }
@@ -79,8 +83,6 @@ function EnergyGame({ finish }: { finish: (result: Result) => void }) {
 }
 
 function WaitingGame({ finish }: { finish:(result:Result)=>void }) { const options=[42,67,54,88,73,96,61]; const [index,setIndex]=useState(0);const [rejected,setRejected]=useState<number[]>([]);const [leaving,setLeaving]=useState(false);const timer=useRef<number|null>(null);useEffect(()=>()=>{if(timer.current!==null)clearTimeout(timer.current);},[]);const accept=()=>{const value=options[index],best=Math.max(...options);finish({score:clampScore(value/best*1000),title:value===best?"Elegiste la mejor opción":"Decisión tomada",metrics:[["Alternativa elegida",`${value} puntos`],["Mejor alternativa",`${best} puntos`],["Momento",`${index+1} de ${options.length}`],["Diferencia",best-value]],explanation:"La cinta de opciones mostró lo que dejaste atrás: esperar abre posibilidades, pero elimina alternativas anteriores."});};const wait=()=>{setLeaving(true);timer.current=window.setTimeout(()=>{setRejected(values=>[...values,options[index]]);setIndex(value=>value+1);setLeaving(false);},420);};return <section className="play-panel centered waiting-simulation"><div className="step-dots" aria-label={`Opción ${index+1} de ${options.length}`}>{options.map((_,step)=><span className={step<=index?"active":""} key={step}/>)}</div><h2>Proyecto {index+1} de {options.length}</h2><p>Solo puedes mirar hacia adelante. Una opción rechazada no vuelve.</p><div className="decision-conveyor"><div className={`option-reveal ${leaving?"leaving":""}`} key={index}>🤖<strong>{options[index]}</strong><span>puntos de potencial</span></div></div>{rejected.length>0&&<div className="rejected-trail"><small>OPCIONES RECHAZADAS</small><div>{rejected.map((value,item)=><span key={item}>✕ {value}</span>)}</div></div>}<div className="action-row"><button className="primary" disabled={leaving} onClick={accept}>Aceptar esta opción</button><button className="secondary" disabled={index===options.length-1||leaving} onClick={wait}>{leaving?"Dejando atrás…":"Seguir esperando"}</button></div></section>; }
-
-function HousingGame({ finish }: { finish:(result:Result)=>void }) { const [value,setValue]=useState(500);const [analyzing,setAnalyzing]=useState(false);const [factor,setFactor]=useState(0);const model=640;const finishAfter=useDelayedFinish(finish);const interval=useRef<number|null>(null);useEffect(()=>()=>{if(interval.current!==null)clearInterval(interval.current);},[]);const submit=()=>{setAnalyzing(true);interval.current=window.setInterval(()=>setFactor(current=>{const next=Math.min(5,current+1);if(next===5&&interval.current!==null){clearInterval(interval.current);interval.current=null;const diff=Math.abs(value-model);finishAfter({score:clampScore(1000-diff*2.4),title:diff<=50?"Estimación muy cercana":"El modelo estimó otro rango",metrics:[["Tu estimación",`${value} unidades`],["Modelo",`${model} unidades`],["Diferencia",`${diff} unidades`],["Variables clave","Tamaño y transporte"]],explanation:"Viste cómo el modelo incorporó cada variable antes de producir la estimación."},700);}return next;}),320);};const factors=[["Tamaño",88],["Transporte",78],["Habitaciones",62],["Áreas verdes",48],["Conservación",70]] as const;return <section className={`play-panel housing-simulation ${analyzing?"analyzing":""}`}><div className="panel-heading"><div><h2>{analyzing?"El modelo está analizando…":"Estima esta vivienda ficticia"}</h2><p>{analyzing?`${factor} de 5 variables procesadas`:"Ajusta el valor antes de consultar al modelo."}</p></div><span>🏠</span></div><div className="house-lab"><div className="house-visual">🏠<i/><b/></div><ul><li>120 m² · 3 habitaciones</li><li>Transporte a 5 minutos</li><li>Áreas verdes cercanas</li><li>Centro a 8 km · Buen estado</li></ul>{analyzing&&<div className="model-scan"/>}</div>{analyzing?<div className="factor-analysis">{factors.map(([name,weight],index)=><div className={index<factor?"processed":""} key={name}><span>{index<factor?"✓":"○"} {name}</span><div><i style={{width:index<factor?`${weight}%`:"0%"}}/></div><strong>{index<factor?`${weight}%`:"…"}</strong></div>)}</div>:<label className="price-slider">Tu estimación: <strong>{value} unidades</strong><input type="range" min="300" max="900" step="10" value={value} onChange={event=>setValue(Number(event.target.value))}/></label>}<button className="primary" disabled={analyzing} onClick={submit}>{analyzing?"Combinando variables…":"Comparar con el modelo"}</button></section>; }
 
 function SpaceGame({ finish }: { finish:(result:Result)=>void }) {
   const [participantTotal,setParticipantTotal]=useState<number | null>(null); const [participant,setParticipant]=useState(1); const [proposals,setProposals]=useState<Array<Set<number>>>([]); const [selected,setSelected]=useState(new Set<number>());const [launching,setLaunching]=useState(false);const finishAfter=useDelayedFinish(finish);

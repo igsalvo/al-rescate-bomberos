@@ -1,0 +1,4 @@
+import { Trophy, Users, X } from "lucide-react";
+import { useMultiplayer } from "../multiplayer/MultiplayerContext";
+
+export function RoomBar({ gameId }: { gameId?: string }) { const { room, playerId, leaveRoom } = useMultiplayer(); if (!room) return null; const ranking=Object.values(room.players).map(player=>({ ...player, score: gameId ? player.scores[gameId] : undefined })).sort((a,b)=>(b.score??-1)-(a.score??-1)); return <aside className="room-bar"><span><Users/>Sala <b>{room.code}</b> · {ranking.length} jugadores</span>{gameId&&<div className="live-ranking"><Trophy/>{ranking.map((player,index)=><span key={player.id}>{index+1}. {player.name} <b>{player.score===undefined?"jugando…":`${player.score} pts`}</b></span>)}</div>}<button onClick={leaveRoom} title="Salir de la sala"><X/></button></aside>; }

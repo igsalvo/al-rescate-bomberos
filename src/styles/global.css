@@ -854,3 +854,64 @@ body.modal-open { overflow:hidden; }
   .instruction-modal li svg { display:none; }
   .hero-benefits { display:grid; }
 }
+
+/* Juego de valoración de viviendas */
+.housing-tutorial,.housing-rounds { background:linear-gradient(145deg,#fff,#f4f8f6); }
+.tutorial-heading,.housing-round-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+.tutorial-heading small,.housing-round-header small { color:#b23a42; letter-spacing:.12em; font-weight:1000; }
+.tutorial-heading h2,.housing-round-header h2 { margin:.25rem 0; color:#0b3a58; }
+.tutorial-heading p { margin:.2rem 0; color:var(--muted); }
+.tutorial-heading > svg { width:54px; height:54px; padding:12px; border-radius:16px; background:#e3f0ec; color:#28705c; }
+.housing-profile { display:grid; grid-template-columns:220px 1fr; gap:1.2rem; align-items:center; padding:1.1rem; border:1px solid #d8e3df; border-radius:18px; background:#fff; }
+.housing-illustration { min-height:180px; display:grid; place-items:center; position:relative; overflow:hidden; border-radius:14px; background:linear-gradient(#bde1ee 0 62%,#9abd8d 63%); }
+.housing-illustration > span { font-size:6rem; position:relative; z-index:2; filter:drop-shadow(0 8px 8px rgba(0,0,0,.15)); }
+.housing-illustration i { position:absolute; width:64px; height:64px; border-radius:50%; background:#ffe47b; top:18px; right:22px; }
+.housing-illustration b { position:absolute; left:0; right:0; bottom:0; height:35px; background:repeating-linear-gradient(90deg,#728f68 0 14px,#86a679 14px 28px); }
+.housing-profile > div:last-child > small { color:#568071; font-size:.63rem; letter-spacing:.11em; font-weight:1000; }
+.housing-profile h3 { margin:.25rem 0 .8rem; font-size:1.45rem; color:#123f59; }
+.housing-profile dl { display:grid; grid-template-columns:1fr 1fr; gap:.45rem; margin:0; }
+.housing-profile dl div { display:flex; justify-content:space-between; gap:.7rem; padding:.45rem .55rem; border-radius:8px; background:#f1f5f3; }
+.housing-profile dt { color:#667a75; font-size:.75rem; }
+.housing-profile dd { margin:0; text-align:right; font-size:.78rem; font-weight:900; }
+.example-result { display:grid; grid-template-columns:180px 1fr; gap:1rem; align-items:center; margin:1rem 0; padding:1rem; border-radius:16px; background:#102f46; color:white; }
+.example-result > div:first-child { display:grid; gap:.25rem; }
+.example-result small { color:#73d0c2; font-size:.62rem; letter-spacing:.1em; font-weight:1000; }
+.example-result > div:first-child strong { font-size:1.4rem; }
+.housing-factors { display:grid; gap:.45rem; }
+.housing-factors > div { display:grid; grid-template-columns:90px 1fr 40px; gap:.55rem; align-items:center; font-size:.72rem; }
+.housing-factors > div > div { height:9px; overflow:hidden; border-radius:99px; background:rgba(160,185,194,.28); }
+.housing-factors i { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#39b99d,#f1c852); animation:factor-grow .6s ease-out; }
+.housing-factors strong { text-align:right; font-variant-numeric:tabular-nums; }
+.housing-rounds .housing-factors { margin:1rem 0; color:#284d5e; }
+.round-pips { display:flex; gap:.35rem; }
+.round-pips span { width:34px; height:7px; border-radius:99px; background:#dbe3e1; }
+.round-pips .complete { background:#36a777; }
+.round-pips .active { background:#e04449; box-shadow:0 0 0 4px rgba(224,68,73,.12); }
+.housing-estimate { display:grid; gap:.7rem; margin:1.2rem 0; padding:1rem; border-radius:14px; background:#eaf3f2; }
+.housing-estimate > strong { font-size:1.8rem; color:#0c4c62; }
+.housing-estimate input { width:100%; accent-color:#db3d43; }
+.housing-estimate > div { display:flex; justify-content:space-between; color:#70827d; font-size:.72rem; }
+.housing-reveal { margin-top:1rem; animation:panel-in .3s ease-out; }
+.estimate-comparison { display:grid; grid-template-columns:1fr auto 1fr; gap:.8rem; align-items:center; }
+.estimate-comparison > div:not(.comparison-arrow) { display:grid; place-items:center; padding:1rem; border-radius:14px; background:#e9f1f0; }
+.estimate-comparison small { color:#607772; font-size:.65rem; letter-spacing:.08em; font-weight:1000; }
+.estimate-comparison strong { color:#0d425c; font-size:2rem; }
+.comparison-arrow { font-size:1.5rem; color:#81948e; }
+.housing-reveal > p { display:flex; align-items:center; gap:.5rem; padding:.7rem 1rem; border-radius:10px; font-weight:900; }
+.housing-reveal > p.close { background:#dff5e9; color:#21724d; }
+.housing-reveal > p.far { background:#fff0d0; color:#765911; }
+@keyframes factor-grow { from { width:0; } }
+
+@media (max-width:700px) {
+  .housing-profile { grid-template-columns:1fr; }
+  .housing-illustration { min-height:130px; }
+  .housing-illustration > span { font-size:4.5rem; }
+  .housing-profile dl { grid-template-columns:1fr; }
+  .example-result { grid-template-columns:1fr; }
+  .tutorial-heading,.housing-round-header { align-items:flex-start; }
+  .tutorial-heading > svg { display:none; }
+  .round-pips span { width:22px; }
+}
+.hero-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:24px}.hero-actions .hero-action{margin:0}.multiplayer-action{display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.1);color:inherit;padding:13px 18px;border-radius:999px;font-weight:800;cursor:pointer;backdrop-filter:blur(10px)}
+.multiplayer-overlay{position:fixed;inset:0;z-index:100;background:rgba(9,20,35,.66);display:grid;place-items:center;padding:20px;backdrop-filter:blur(6px)}.multiplayer-panel{position:relative;width:min(500px,100%);max-height:90vh;overflow:auto;background:#fff;color:#18212d;border-radius:28px;padding:34px;box-shadow:0 25px 80px rgba(0,0,0,.3)}.multiplayer-panel h2{font-size:clamp(1.6rem,5vw,2.25rem);margin:8px 0 10px}.multiplayer-panel>p{color:#5d6977}.multiplayer-panel .primary,.multiplayer-panel .secondary{width:100%;justify-content:center;margin-top:10px}.multiplayer-panel label{display:grid;gap:7px;font-weight:800;margin:18px 0}.multiplayer-panel input{font:inherit;border:1px solid #cfd8e3;border-radius:13px;padding:13px 15px}.multiplayer-panel .code-input{text-transform:uppercase;letter-spacing:.28em;font-size:1.3rem;font-weight:900}.text-button{border:0;background:none;color:#566579;padding:12px;width:100%;cursor:pointer}.form-error{background:#fff0ee;color:#aa2c1d;padding:10px 12px;border-radius:10px}.room-code{width:100%;display:flex;justify-content:center;align-items:center;gap:14px;border:0;background:#e9f7f2;color:#087552;border-radius:18px;padding:18px;font-size:clamp(2rem,10vw,3.2rem);font-weight:950;letter-spacing:.16em;cursor:pointer}.room-players{display:grid;gap:8px;margin:22px 0}.room-players>span{display:flex;align-items:center;gap:9px;background:#f4f7fa;border-radius:12px;padding:11px 13px;font-weight:800}.room-players i{color:#ef9e2f;font-style:normal}.room-players small{margin-left:auto;color:#087552}.room-hint{background:#eef5ff;padding:12px;border-radius:12px}.room-bar{position:sticky;top:0;z-index:80;display:flex;align-items:center;gap:18px;justify-content:space-between;background:#132a3f;color:#fff;padding:9px clamp(14px,4vw,45px);box-shadow:0 3px 18px rgba(0,0,0,.2)}.room-bar>span{display:flex;align-items:center;gap:7px;white-space:nowrap}.room-bar svg{width:18px}.room-bar>button{border:0;background:rgba(255,255,255,.12);color:#fff;border-radius:8px;padding:6px;cursor:pointer}.live-ranking{display:flex;gap:12px;align-items:center;overflow:auto;font-size:.84rem}.live-ranking>span{white-space:nowrap;background:rgba(255,255,255,.1);padding:5px 8px;border-radius:8px}.live-ranking b{color:#8fe3c4;margin-left:3px}
+@media(max-width:700px){.room-bar{align-items:flex-start}.live-ranking{width:100%}.room-bar{flex-wrap:wrap;gap:7px}.room-bar>button{position:absolute;right:10px;top:7px}.multiplayer-panel{padding:26px 20px}.hero-actions>*{width:100%;justify-content:center}}
