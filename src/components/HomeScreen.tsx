@@ -4,7 +4,7 @@ import { games, type GameDefinition } from "../config/games";
 import { platform } from "../config/platform";
 import { PlatformHeader } from "./PlatformHeader";
 
-const filters = ["Todos", "Individual", "Grupal", "Datos y decisiones", "Optimización", "Simulación"];
+const filters = ["Todos", "Datos y decisiones", "Optimización", "Simulación"];
 const modeLabel = { individual: "Individual", group: "Grupal", both: "Individual o grupal" };
 const difficultyLabel = { easy: "Fácil", medium: "Intermedio", progressive: "Progresivo" };
 
@@ -20,7 +20,7 @@ function GameCard({ game, onPlay }: { game: GameDefinition; onPlay: () => void }
 
 export function HomeScreen({ sound, onSound, onPlay, onMultiplayer }: { sound: boolean; onSound: (value: boolean) => void; onPlay: (game: GameDefinition) => void; onMultiplayer: () => void }) {
   const [filter, setFilter] = useState("Todos");
-  const visible = useMemo(() => games.filter(game => filter === "Todos" || (filter === "Individual" && game.mode !== "group") || (filter === "Grupal" && game.mode !== "individual") || game.categories.includes(filter)), [filter]);
+  const visible = useMemo(() => games.filter(game => filter === "Todos" || game.categories.includes(filter)), [filter]);
   return <div className="catalog-page">
     <PlatformHeader sound={sound} onSound={onSound} />
     <main>

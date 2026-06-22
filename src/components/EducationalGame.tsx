@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { GameDefinition } from "../config/games";
 import { championProbabilities, clampScore, energyTotal, fireSpreadFrames, hospitalImpact, optimalKnapsack, type FireCell } from "../game/common";
 import { CommonResult } from "./CommonResult";
 import { RaceStrategyGame } from "./RaceStrategyGame";
 import { InstructionModal } from "./InstructionModal";
+import { GameDifficultySelector, type EducationalDifficulty } from "./GameDifficultySelector";
+import { DetectiveGame } from "./DetectiveGame";
 import { gameInstructions } from "../config/instructions";
 import { CircleHelp } from "lucide-react";
 import { HousingValuationGame } from "./HousingValuationGame";
@@ -26,21 +28,23 @@ export function EducationalGame({ game, onHome }: { game: GameDefinition; onHome
   const { submitScore } = useMultiplayer();
   const [run, setRun] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
-  const [instructionsOpen,setInstructionsOpen]=useState(true);
-  const reset = () => { setResult(null); setRun(value => value + 1); setInstructionsOpen(true); };
+  const [difficulty, setDifficulty] = useState<EducationalDifficulty | null>(null);
+  const [instructionsOpen,setInstructionsOpen]=useState(false);
+  const reset = () => { setResult(null); setDifficulty(null); setRun(value => value + 1); setInstructionsOpen(false); };
+  const chooseDifficulty = (nextDifficulty: EducationalDifficulty) => { setDifficulty(nextDifficulty); setInstructionsOpen(true); };
   const finish = (next: Result) => { setResult(next); void submitScore(game.id, next.score).catch(() => undefined); };
   return <main className="mini-game" key={run}>
     <div className="game-progress" aria-hidden="true"><span /></div>
     <section className="game-intro"><div className="game-icon">{game.icon}</div><div><p className="eyebrow">{game.categories.join(" · ")}</p><h1>{game.title}</h1><p>{game.fullDescription}</p></div><button className="instructions-trigger" type="button" onClick={()=>setInstructionsOpen(true)}><CircleHelp aria-hidden="true"/> Cómo jugar</button></section>
-    {result ? <CommonResult {...result} learning={game.learning} researchUrl={game.researchUrl} researchTitle={game.researchTitle} onAgain={reset} onHome={onHome} /> : <GameBody game={game} finish={finish} />}
+    {result ? <CommonResult {...result} learning={game.learning} researchUrl={game.researchUrl} researchTitle={game.researchTitle} onAgain={reset} onHome={onHome} /> : difficulty ? <GameBody game={game} difficulty={difficulty} finish={finish} /> : <GameDifficultySelector gameTitle={game.title} onChoose={chooseDifficulty} />}
     <InstructionModal open={instructionsOpen} title={game.title} icon={game.icon} instructions={gameInstructions[game.id]} onClose={()=>setInstructionsOpen(false)}/>
   </main>;
 }
 
-function GameBody({ game, finish }: { game: GameDefinition; finish: (result: Result) => void }) {
+function GameBody({ game, difficulty, finish }: { game: GameDefinition; difficulty: EducationalDifficulty; finish: (result: Result) => void }) {
   if (game.id === "incendio") return <FireGame finish={finish} />;
   if (game.id === "formula-1") return <RaceStrategyGame finish={finish} />;
-  if (game.id === "detective-datos") return <DetectiveGame finish={finish} />;
+  if (game.id === "detective-datos") return <DetectiveGame difficulty={difficulty} finish={finish} />;
   if (game.id === "campeon") return <ChampionGame finish={finish} />;
   if (game.id === "energia") return <EnergyGame finish={finish} />;
   if (game.id === "esperar") return <WaitingGame finish={finish} />;
@@ -60,13 +64,6 @@ function FireGame({ finish }: { finish: (result: Result) => void }) {
   const toggle = (key: string) => setBreaks(current => { const next = new Set(current); if (next.has(key)) next.delete(key); else if (next.size < 4) next.add(key); return next; });
   const simulate = () => { setSimulating(true); const frames=fireSpreadFrames(fireBoard,breaks,6); frames.forEach((frame,index)=>timers.current.push(window.setTimeout(()=>{setBurning(frame);setWave(index);},index*620))); const burned=frames[frames.length-1]; let homes=0,nature=0;fireBoard.forEach((row,y)=>row.forEach((cell,x)=>{if(!burned.has(`${x},${y}`)&&cell==="home")homes++;if(!burned.has(`${x},${y}`)&&cell==="nature")nature++;}));const score=clampScore(420+homes*80+nature*55);finishAfter({score,title:score>=800?"Buena ubicación":"Prueba otra estrategia",metrics:[["Viviendas protegidas",homes],["Áreas naturales protegidas",nature],["Superficie afectada",`${burned.size} zonas`],["Referencia","4 cortafuegos bien distribuidos"]],explanation:"Viste la propagación por oleadas: cada cortafuego cortó conexiones y cambió el frente del incendio."},frames.length*620+700); };
   return <section className={`play-panel fire-simulation ${simulating ? "running" : ""}`}><div className="panel-heading"><div><h2>{simulating?`Frente de fuego · minuto ${wave+1}`:"Ubica 4 cortafuegos"}</h2><p>{simulating?"El viento empuja las llamas hacia el este →":"Viento hacia el este →. Selecciona celdas antes de iniciar."}</p></div><span>{simulating?`🔥 ${burning.size}`:`${breaks.size}/4`}</span></div><div className="wind-stream" aria-hidden="true"><i/><i/><i/><span>VIENTO</span></div><div className="fire-board">{fireBoard.flatMap((row,y)=>row.map((cell,x)=>{const key=`${x},${y}`;const isBurning=burning.has(key);return <button type="button" disabled={simulating} aria-label={`${cell}, ${breaks.has(key)?"con":"sin"} cortafuego`} className={`${cell} ${breaks.has(key)?"firebreak":""} ${simulating&&isBurning?"burning":""} ${simulating&&!isBurning?"protected":""}`} onClick={()=>cell!=="fire"&&toggle(key)} key={key}>{breaks.has(key)?"🧱":isBurning?"🔥":cell==="home"?"🏠":cell==="nature"?"🦌":"🌲"}<small>{isBurning&&simulating?"Afectada":breaks.has(key)?"Bloqueo":""}</small></button>;}))}</div><div className="fire-legend"><span>🔥 Frente activo</span><span>🧱 Cortafuego</span><span>✨ Zona protegida</span></div><div className="decision-footer"><span>{simulating?`Propagación ${Math.min(100,Math.round((wave+1)/6*100))}%`:`${4-breaks.size} piezas disponibles`}</span><button className="primary" disabled={breaks.size<3||simulating} onClick={simulate}>{simulating?"Simulando expansión…":"Iniciar simulación"}</button></div></section>;
-}
-
-function DetectiveGame({ finish }: { finish: (result: Result) => void }) {
-  const levels=[{items:["●","●","■","●","●"],odd:2,clue:"La forma no coincide"},{items:["▲","▲","▲","△","▲"],odd:3,clue:"El relleno es diferente"},{items:["◆","◆","◈","◆","◆"],odd:2,clue:"Combina borde y centro"}];
-  const [level,setLevel]=useState(0);const [correct,setCorrect]=useState(0);const [selected,setSelected]=useState<number|null>(null);const [feedback,setFeedback]=useState<"correct"|"wrong"|null>(null);const started=useMemo(()=>Date.now(),[]);const timer=useRef<number|null>(null);useEffect(()=>()=>{if(timer.current!==null)clearTimeout(timer.current);},[]);
-  const choose=(index:number)=>{if(feedback)return;const hit=index===levels[level].odd;const next=correct+(hit?1:0);setSelected(index);setFeedback(hit?"correct":"wrong");timer.current=window.setTimeout(()=>{if(level===2){const seconds=Math.max(1,Math.round((Date.now()-started)/1000));finish({score:clampScore(next*300+Math.max(0,100-seconds*4)),title:next===3?"Patrones detectados":"Sigue observando",metrics:[["Respuestas correctas",`${next}/3`],["Tiempo",`${seconds}s`],["Anomalía","Forma, relleno y combinación"]],explanation:"El escáner comparó características y destacó por qué una observación se alejaba del patrón."});}else{setCorrect(next);setLevel(value=>value+1);setSelected(null);setFeedback(null);}},750);};
-  return <section className={`play-panel detective-simulation ${feedback?`feedback-${feedback}`:""}`}><div className="detective-header"><div><small>ANÁLISIS DE ANOMALÍAS</small><h2>Nivel {level+1} de 3</h2></div><div className="detective-progress">{levels.map((_,index)=><span className={index<level?"complete":index===level?"active":""} key={index}/>)}</div></div><p>El escáner está comparando forma, tamaño y relleno. Selecciona la anomalía.</p><div className="scanner-area"><div className="scanner-beam" aria-hidden="true"/><div className="pattern-grid">{levels[level].items.map((value,index)=><button type="button" disabled={feedback!==null} className={selected===index?feedback??"":""} key={index} onClick={()=>choose(index)} aria-label={`Elemento ${index+1}`}>{value}<small>#{index+1}</small></button>)}</div></div>{feedback&&<div className="analysis-feedback" aria-live="polite"><strong>{feedback==="correct"?"✓ Patrón detectado":"↗ Era otro elemento"}</strong><span>{levels[level].clue}</span></div>}</section>;
 }
 
 function ChampionGame({ finish }: { finish: (result: Result) => void }) {
