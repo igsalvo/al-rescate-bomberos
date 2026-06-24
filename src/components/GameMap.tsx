@@ -316,6 +316,18 @@ export function GameMap({
     { title: "Evento", text: tripEvent?.description ?? "No apareció un evento inesperado relevante.", sound: tripEvent?.onomatopoeia ?? "¡Controlado!", icon: "💥" },
     { title: "Llegada", text: `Destino: ${level.emergencyLabel}.`, sound: "¡Llegamos!", icon: "🏁" }
   ];
+  const videoProgress = [4, 24, 52, 74, 92][Math.max(0, Math.min(4, comicStage))] ?? 4;
+  const emergencyIcon = level.emergencyType === "crash" ? "🚗" : level.emergencyType === "school" ? "🏫" : "🔥";
+  const visibleObstacleTypes = currentObstacles.filter((item) => item !== "oneway").slice(0, 4);
+  const obstacleIcons: Record<ObstacleType, string> = {
+    traffic: "🚗",
+    closed: "⛔",
+    works: "🚧",
+    oneway: "↳",
+    busy: "🚒",
+    otherEmergency: "🚨",
+    rain: "🌧️"
+  };
 
   return (
     <main className="game-layout">
@@ -400,17 +412,55 @@ export function GameMap({
         </svg>
         {isAnimating ? (
           <div className="comic-simulation" aria-live="polite">
-            <div className="comic-strip">
-              {comicPanels.map((panel, index) => (
-                <article className={`comic-panel ${index === comicStage ? "active" : index < comicStage ? "done" : ""}`} key={panel.title}>
-                  <span className="comic-icon">{panel.icon}</span>
-                  <div>
-                    <strong>{panel.sound}</strong>
-                    <small>{panel.title}</small>
-                    <p>{panel.text}</p>
+            <div className={`dispatch-video stage-${Math.max(0, comicStage)}`} style={{ "--truck-progress": `${videoProgress}%` } as React.CSSProperties}>
+              <div className="video-sky" aria-hidden="true"><span /> <span /> <span /></div>
+              <div className="video-city" aria-hidden="true">
+                <i /> <i /> <i /> <i />
+              </div>
+              <div className="video-station">
+                <strong>Compañía</strong>
+                <span>🚒</span>
+                <div className="firefighters" aria-label="Bomberos subiendo al carro">
+                  {["👨‍🚒", "👩‍🚒", "👨‍🚒"].map((person, index) => <b key={`${person}-${index}`}>{person}</b>)}
+                </div>
+              </div>
+              <div className="video-emergency">
+                <strong>{level.emergencyLabel}</strong>
+                <span>{emergencyIcon}</span>
+                <i />
+              </div>
+              <div className="video-road" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="video-obstacles" aria-label="Obstáculos visibles durante el trayecto">
+                {visibleObstacleTypes.length ? visibleObstacleTypes.map((item, index) => (
+                  <div className={`video-obstacle obstacle-${index}`} key={item}>
+                    <span>{obstacleIcons[item]}</span>
+                    <small>{OBSTACLE_LABELS[item]}</small>
                   </div>
-                </article>
-              ))}
+                )) : <div className="video-obstacle obstacle-clear"><span>✅</span><small>Ruta despejada</small></div>}
+              </div>
+              {tripEvent ? (
+                <div className="video-event">
+                  <strong>{tripEvent.onomatopoeia}</strong>
+                  <span>{tripEvent.label}</span>
+                </div>
+              ) : null}
+              <div className="video-truck" aria-label={`${selectedTruckData?.name ?? "Carro"} avanzando`}>
+                <span className="siren-light" />
+                <span className="truck-cab">🚒</span>
+                <small>{selectedTruckData?.icon ?? "B"}</small>
+                <i />
+              </div>
+              <div className="video-caption">
+                <strong>{comicPanels[Math.max(0, comicStage)]?.sound}</strong>
+                <span>{comicPanels[Math.max(0, comicStage)]?.text}</span>
+              </div>
+              <div className="video-progress" aria-hidden="true">
+                {comicPanels.map((panel, index) => <span className={index <= comicStage ? "active" : ""} key={panel.title} />)}
+              </div>
             </div>
             {awaitingDecision ? (
               <div className="event-decision">
