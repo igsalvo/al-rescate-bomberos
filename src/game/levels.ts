@@ -12,6 +12,12 @@ export const trucks: FireTruck[] = [
     id: "b1",
     name: "Bomba 1",
     stationId: "central",
+    type: "bomba",
+    speed: 7,
+    waterCapacity: 3200,
+    bestFor: ["fire", "school"],
+    roadCompatibility: ["avenue", "street"],
+    resourceLevel: 7,
     preparationTime: 2,
     status: "available",
     icon: "B1"
@@ -20,6 +26,11 @@ export const trucks: FireTruck[] = [
     id: "r2",
     name: "Rescate 2",
     stationId: "parque",
+    type: "rescate",
+    speed: 9,
+    bestFor: ["crash", "school"],
+    roadCompatibility: ["avenue", "street", "secondary"],
+    resourceLevel: 5,
     preparationTime: 3,
     status: "available",
     icon: "R2"
@@ -28,6 +39,12 @@ export const trucks: FireTruck[] = [
     id: "q3",
     name: "Químico 3",
     stationId: "central",
+    type: "quimico",
+    speed: 6,
+    waterCapacity: 1800,
+    bestFor: ["fire"],
+    roadCompatibility: ["avenue", "street"],
+    resourceLevel: 9,
     preparationTime: 5,
     status: "busy",
     icon: "Q3"
@@ -36,6 +53,12 @@ export const trucks: FireTruck[] = [
     id: "e4",
     name: "Escala 4",
     stationId: "rio",
+    type: "escala",
+    speed: 5,
+    waterCapacity: 1200,
+    bestFor: ["fire", "school"],
+    roadCompatibility: ["avenue"],
+    resourceLevel: 10,
     preparationTime: 4,
     status: "available",
     icon: "E4"
@@ -49,6 +72,9 @@ export const levels: LevelConfig[] = [
     subtitle: "Incendio en una vivienda",
     emergencyType: "fire",
     emergencyLabel: "Vivienda",
+    emergencyDescription: "Se reporta humo y fuego en una vivienda cercana al colegio. Debes elegir un carro adecuado y confirmar una ruta segura.",
+    priority: "Alta",
+    recommendedTruckTypes: ["bomba"],
     emergencyPosition: { x: 555, y: 420 },
     stationIds: ["central"],
     truckIds: ["b1"],
@@ -56,7 +82,7 @@ export const levels: LevelConfig[] = [
     targetNode: "n",
     manualRouting: false,
     weather: "clear",
-    briefing: "Arrastra el carro hacia una ruta. El camino corto puede tener más tráfico.",
+    briefing: "Elige el carro y una ruta. Puedes cambiar tu decisión antes de despachar.",
     routeOptions: [
       {
         id: "corta",
@@ -82,11 +108,14 @@ export const levels: LevelConfig[] = [
     ]
   },
   {
-    id: "rescatista",
-    title: "Nivel 2: Rescatista",
+    id: "operador",
+    title: "Nivel 2: Operador",
     subtitle: "Accidente vehicular",
     emergencyType: "crash",
     emergencyLabel: "Accidente",
+    emergencyDescription: "Un accidente de tránsito bloquea parte de la red. Se requiere respuesta rápida y un vehículo compatible con rescate.",
+    priority: "Alta",
+    recommendedTruckTypes: ["rescate", "bomba"],
     emergencyPosition: { x: 400, y: 405 },
     stationIds: ["central", "parque"],
     truckIds: ["b1", "r2", "q3"],
@@ -125,6 +154,9 @@ export const levels: LevelConfig[] = [
     subtitle: "Emergencia en un colegio",
     emergencyType: "school",
     emergencyLabel: "Colegio",
+    emergencyDescription: "Hay una emergencia en un colegio durante horario de clases. La decisión debe equilibrar rapidez, seguridad y uso de recursos.",
+    priority: "Crítica",
+    recommendedTruckTypes: ["bomba", "rescate", "escala"],
     emergencyPosition: { x: 710, y: 535 },
     stationIds: ["central", "parque", "rio"],
     truckIds: ["b1", "r2", "q3", "e4"],
@@ -132,7 +164,7 @@ export const levels: LevelConfig[] = [
     targetNode: "s",
     manualRouting: true,
     weather: "rain",
-    briefing: "Construye el recorrido por la red. Respeta cierres y sentidos del tránsito."
+    briefing: "Construye el recorrido por la red. Respeta cierres y sentidos del tránsito antes de despachar."
   }
 ];
 

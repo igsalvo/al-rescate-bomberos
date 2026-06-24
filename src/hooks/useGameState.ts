@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { levels, stations, trucks } from "../game/levels";
-import { calculateScore, starsForScore } from "../game/scoring";
-import { collectObstacles, edgeIdsToNodePath, pathCost, shortestPath } from "../game/pathfinding";
-import type { Difficulty, GameMode, GameScreen, LevelConfig, LevelResultData } from "../game/types";
+import { calculateDispatchScore, gradeForScore, starsForHundredScore } from "../game/scoring";
+import { collectObstacles } from "../game/pathfinding";
+import type { Difficulty, GameMode, GameScreen, LevelConfig, LevelResultData, TripEvent } from "../game/types";
+import { EDUCATIONAL_MESSAGE } from "../config/content";
 
 export function useGameState() {
   const [screen, setScreen] = useState<GameScreen>("start");
@@ -43,26 +44,31 @@ export function useGameState() {
     routeName: string;
     path: string[];
     decisionTime: number;
+    preparationTime: number;
+    travelTime: number;
+    tripEvent?: TripEvent;
   }) => {
     const station = stations.find((item) => item.id === params.stationId)!;
     const truck = trucks.find((item) => item.id === params.truckId)!;
-    const routeTime = pathCost(params.path, params.level.weather);
-    const playerTime = Math.round((routeTime + truck.preparationTime) * 10) / 10;
-    const best = shortestPath(params.level.startNodeByStation[params.stationId], params.level.targetNode, params.level.weather);
-    const optimalTime = Math.round((best.time + truck.preparationTime) * 10) / 10;
-    const score = calculateScore(playerTime, optimalTime);
+    const playerTime = Math.round((params.travelTime + params.preparationTime) * 10) / 10;
+    const scoring = calculateDispatchScore({
+      level: params.level,
+      truck,
+      path: params.path,
+      preparationTime: params.preparationTime,
+      travelTime: params.travelTime,
+      event: params.tripEvent
+    });
+    const score = scoring.score;
     const obstacles = collectObstacles(params.path, params.level.weather);
-    const gap = Math.max(0, Math.round((playerTime - optimalTime) * 10) / 10);
-    const explanation =
-      gap <= 1
-        ? "Tu decisión fue muy cercana a la mejor alternativa disponible."
-        : obstacles.includes("traffic")
-          ? `El tráfico aumentó el tiempo. Una mejor ruta ahorraba ${gap} segundos.`
-          : obstacles.includes("closed")
-            ? "La calle cerrada obliga a buscar un desvío disponible."
-            : obstacles.includes("rain")
-              ? `La lluvia aumentó el tiempo de viaje. Una mejor ruta ahorraba ${gap} segundos.`
-              : `Una mejor ruta permitía ahorrar ${gap} segundos.`;
+    const explanation = `Obtuviste ${score} puntos. ${truck.name} ${params.level.recommendedTruckTypes?.includes(truck.type) ? "era adecuado" : "no era el vehículo más especializado"} para ${params.level.emergencyLabel.toLowerCase()}, y ${params.routeName.toLowerCase()} ${obstacles.includes("traffic") || obstacles.includes("works") ? "presentaba condiciones que afectaron el recorrido" : "mantuvo condiciones controladas"}.`;
+    const achievements = [
+      scoring.breakdown.route >= 24 ? "Ruta inteligente" : "",
+      scoring.breakdown.truck >= 24 ? "Vehículo correcto" : "",
+      scoring.breakdown.safety >= 8 ? "Respuesta segura" : "",
+      params.tripEvent?.choiceRequired ? "Bajo presión" : "",
+      score >= 95 ? "Despacho perfecto" : ""
+    ].filter(Boolean);
 
     const result: LevelResultData = {
       levelId: params.level.id,
@@ -71,14 +77,24 @@ export function useGameState() {
       truckName: truck.name,
       routeName: params.routeName,
       playerTime,
-      optimalTime,
+      preparationTime: params.preparationTime,
+      travelTime: params.travelTime,
+      optimalTime: scoring.bestTime,
       decisionTime: Math.round(params.decisionTime),
       score,
-      stars: starsForScore(score),
+      stars: starsForHundredScore(score),
       obstacles,
+      breakdown: scoring.breakdown,
+      grade: gradeForScore(score),
+      strengths: scoring.strengths,
+      improvements: scoring.improvements,
+      achievements,
+      educationalMessage: EDUCATIONAL_MESSAGE,
+      bestCombination: scoring.bestCombination,
+      tripEvent: params.tripEvent,
       explanation,
       playerPath: params.path,
-      optimalPath: best.nodes
+      optimalPath: scoring.bestPath
     };
     setResults((current) => [...current, result]);
     setScreen("levelResult");

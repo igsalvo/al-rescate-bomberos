@@ -4,7 +4,7 @@ import { OBSTACLE_LABELS } from "../config/content";
 import { cityEdges, cityNodes } from "../game/graph";
 import { stations, trucks } from "../game/levels";
 import { collectObstacles, edgeIdsToNodePath, findEdgeBetween, isValidMove, pathCost } from "../game/pathfinding";
-import type { FireTruck as FireTruckType, LevelConfig, ObstacleType, Point } from "../game/types";
+import type { FireTruck as FireTruckType, LevelConfig, ObstacleType, Point, TripEvent } from "../game/types";
 import { AudioControls } from "./AudioControls";
 import { EmergencyMarker } from "./EmergencyMarker";
 import { FireTruck } from "./FireTruck";
@@ -24,6 +24,40 @@ function distance(a: Point, b: Point) {
 
 function pathD(nodes: string[]) {
   return nodes.map((node, index) => `${index === 0 ? "M" : "L"} ${cityNodes[node].x} ${cityNodes[node].y}`).join(" ");
+}
+
+function pathEdges(nodes: string[]) {
+  const edges = [];
+  for (let index = 0; index < nodes.length - 1; index += 1) {
+    const edge = findEdgeBetween(nodes[index], nodes[index + 1]);
+    if (edge) edges.push(edge);
+  }
+  return edges;
+}
+
+function generateTripEvent(level: LevelConfig, path: string[], truck?: FireTruckType): TripEvent | undefined {
+  const obstacles = collectObstacles(path, level.weather);
+  const edges = pathEdges(path);
+  const hasSecondary = edges.some((edge) => edge.kind === "secondary");
+  const hasNarrowIssue = truck && truck.resourceLevel >= 9 && hasSecondary;
+  const candidates: TripEvent[] = [];
+  if (obstacles.includes("traffic")) {
+    candidates.push({ id: "traffic-clears", label: "El tráfico se despeja", description: "La congestión baja antes de que llegue el carro.", onomatopoeia: "¡Avanza!", timeModifier: -3, safetyModifier: 1 });
+    candidates.push({ id: "traffic-rises", label: "El tráfico aumenta", description: "Un cruce se congestiona y obliga a reducir velocidad.", onomatopoeia: "¡Atasco!", timeModifier: 4, safetyModifier: -1, choiceRequired: level.id !== "explorador" });
+  }
+  if (obstacles.includes("works")) candidates.push({ id: "blocked-lane", label: "Tramo temporalmente bloqueado", description: "Los trabajos ocupan una pista y el avance es más lento.", onomatopoeia: "¡Desvío!", timeModifier: 3, safetyModifier: -1, choiceRequired: level.id !== "explorador" });
+  if (hasSecondary) candidates.push({ id: "secondary-shortcut", label: "Calle secundaria disponible", description: "Un tramo alternativo permite recuperar algunos segundos.", onomatopoeia: "¡Ruta libre!", timeModifier: -2, safetyModifier: 0 });
+  if (hasNarrowIssue) candidates.push({ id: "narrow-street", label: "Calle estrecha", description: "El vehículo grande debe maniobrar con más cuidado.", onomatopoeia: "¡Cuidado!", timeModifier: 3, safetyModifier: -2, choiceRequired: level.id !== "explorador" });
+  if (!candidates.length || Math.random() > 0.72) return undefined;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function travelTimeWithUncertainty(level: LevelConfig, path: string[], truck?: FireTruckType, event?: TripEvent) {
+  const base = pathCost(path, level.weather);
+  const obstacles = collectObstacles(path, level.weather);
+  const trafficVariation = obstacles.includes("traffic") ? 1 + Math.floor(Math.random() * 5) : 0;
+  const roadPenalty = truck ? pathEdges(path).reduce((sum, edge) => sum + (truck.roadCompatibility.includes(edge.kind) ? 0 : 1.8), 0) : 0;
+  return Math.max(1, Math.round((base + trafficVariation + roadPenalty + (event?.timeModifier ?? 0)) * 10) / 10);
 }
 
 export function GameMap({
@@ -47,10 +81,13 @@ export function GameMap({
   reducedMotion: boolean;
   onBack: () => void;
   onRestart: () => void;
-  onFinish: (params: { stationId: string; truckId: string; routeName: string; path: string[]; decisionTime: number }) => void;
+  onFinish: (params: { stationId: string; truckId: string; routeName: string; path: string[]; decisionTime: number; preparationTime: number; travelTime: number; tripEvent?: TripEvent }) => void;
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const levelStartedAt = useRef(Date.now());
+  const timers = useRef<number[]>([]);
+  const currentEvent = useRef<TripEvent | undefined>(undefined);
+  const currentTravelTime = useRef(0);
   const availableStations = stations.filter((station) => level.stationIds.includes(station.id));
   const [selectedStation, setSelectedStation] = useState(availableStations[0]?.id ?? "");
   const availableTrucks = trucks.filter((truck) => level.truckIds.includes(truck.id) && truck.stationId === selectedStation);
@@ -61,6 +98,18 @@ export function GameMap({
   const [invalid, setInvalid] = useState("");
   const [isAnimating, setIsAnimating] = useState(false);
   const [travelTime, setTravelTime] = useState(0);
+  const [selectedRouteId, setSelectedRouteId] = useState("");
+  const [comicStage, setComicStage] = useState(-1);
+  const [tripEvent, setTripEvent] = useState<TripEvent | undefined>();
+  const [awaitingDecision, setAwaitingDecision] = useState(false);
+  const [pendingFinish, setPendingFinish] = useState<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      timers.current.forEach(window.clearTimeout);
+      stopSiren();
+    };
+  }, [stopSiren]);
 
   useEffect(() => {
     levelStartedAt.current = Date.now();
@@ -71,6 +120,12 @@ export function GameMap({
     setManualPath([level.startNodeByStation[firstStation]]);
     setInvalid("");
     setTravelTime(0);
+    setSelectedRouteId("");
+    setComicStage(-1);
+    setTripEvent(undefined);
+    currentEvent.current = undefined;
+    currentTravelTime.current = 0;
+    setAwaitingDecision(false);
   }, [level.id]);
 
   useEffect(() => {
@@ -78,6 +133,7 @@ export function GameMap({
     if (!station) return;
     setTruckPoint(station.position);
     setManualPath([level.startNodeByStation[selectedStation]]);
+    setSelectedRouteId("");
     const firstTruck = trucks.find((truck) => level.truckIds.includes(truck.id) && truck.stationId === selectedStation);
     if (firstTruck) setSelectedTruck(firstTruck.id);
   }, [selectedStation, level]);
@@ -97,6 +153,7 @@ export function GameMap({
     route,
     nodes: edgeIdsToNodePath(route.edgeIds, level.startNodeByStation[selectedStation])
   }));
+  const selectedRoute = routePaths.find(({ route }) => route.id === selectedRouteId);
 
   const obstacleMarkers = useMemo(() => {
     const markers: { key: string; type: ObstacleType; point: Point }[] = [];
@@ -119,6 +176,23 @@ export function GameMap({
     };
   };
 
+  const completeDispatch = (path: string[], routeName: string, actualTravelTime: number, event?: TripEvent) => {
+    stopSiren();
+    onBeep("arrival");
+    setIsAnimating(false);
+    setComicStage(-1);
+    onFinish({
+      stationId: selectedStation,
+      truckId: selectedTruck,
+      routeName,
+      path,
+      decisionTime: (Date.now() - levelStartedAt.current) / 1000,
+      preparationTime: selectedTruckData?.preparationTime ?? 0,
+      travelTime: actualTravelTime,
+      tripEvent: event
+    });
+  };
+
   const animateAndFinish = (path: string[], routeName: string) => {
     if (!selectedTruckData || selectedTruckData.status !== "available") {
       setInvalid("Selecciona un carro disponible.");
@@ -134,29 +208,37 @@ export function GameMap({
     setInvalid("");
     setIsAnimating(true);
     setTravelTime(0);
+    setAwaitingDecision(false);
+    timers.current.forEach(window.clearTimeout);
+    timers.current = [];
+    const event = generateTripEvent(level, path, selectedTruckData);
+    const actualTravelTime = travelTimeWithUncertainty(level, path, selectedTruckData, event);
+    currentEvent.current = event;
+    currentTravelTime.current = actualTravelTime;
+    setTripEvent(event);
+    setComicStage(0);
     startSiren();
     const points = path.map((node) => cityNodes[node]);
     let index = 0;
-    const stepMs = reducedMotion ? 80 : 520;
+    const stepMs = reducedMotion ? 80 : 620;
     const move = () => {
       setTruckPoint(points[index]);
-      setTravelTime(Math.round(pathCost(path.slice(0, index + 1), level.weather) * 10) / 10);
+      setTravelTime(Math.round((currentTravelTime.current * index / Math.max(1, points.length - 1)) * 10) / 10);
+      setComicStage(Math.min(event ? 4 : 3, index === 0 ? 0 : index >= points.length - 1 ? (event ? 4 : 3) : index === 1 ? 1 : event ? 2 : 2));
       if (index < points.length - 1) {
         index += 1;
-        window.setTimeout(move, stepMs);
-      } else {
-        stopSiren();
-        onBeep("arrival");
-        window.setTimeout(() => {
-          setIsAnimating(false);
-          onFinish({
-            stationId: selectedStation,
-            truckId: selectedTruck,
-            routeName,
-            path,
-            decisionTime: (Date.now() - levelStartedAt.current) / 1000
+        if (event?.choiceRequired && index === Math.max(2, Math.floor(points.length / 2))) {
+          setComicStage(3);
+          setAwaitingDecision(true);
+          setPendingFinish(() => () => {
+            setAwaitingDecision(false);
+            timers.current.push(window.setTimeout(move, stepMs));
           });
-        }, reducedMotion ? 80 : 420);
+          return;
+        }
+        timers.current.push(window.setTimeout(move, stepMs));
+      } else {
+        timers.current.push(window.setTimeout(() => completeDispatch(path, routeName, currentTravelTime.current, currentEvent.current), reducedMotion ? 80 : 520));
       }
     };
     move();
@@ -169,7 +251,8 @@ export function GameMap({
       onBeep("blocked");
       return;
     }
-    animateAndFinish(routeHit.nodes, routeHit.route.name);
+    setSelectedRouteId(routeHit.route.id);
+    onBeep("select");
   };
 
   const nearestNode = (point: Point) => {
@@ -223,7 +306,16 @@ export function GameMap({
   };
 
   const manualComplete = manualPath[manualPath.length - 1] === level.targetNode;
-  const currentObstacles = collectObstacles(level.manualRouting ? manualPath : [], level.weather);
+  const selectedPath = level.manualRouting ? manualPath : selectedRoute?.nodes ?? [];
+  const currentObstacles = collectObstacles(selectedPath, level.weather);
+  const canDispatch = selectedTruckData?.status === "available" && (level.manualRouting ? manualComplete : Boolean(selectedRoute));
+  const comicPanels = [
+    { title: "Salida", text: `${selectedTruckData?.name ?? "Carro"} sale de ${stations.find((item) => item.id === selectedStation)?.name ?? "la compañía"}.`, sound: "¡En marcha!", icon: "🚒" },
+    { title: "Ruta", text: `Ingreso a ${level.manualRouting ? "la ruta construida" : selectedRoute?.route.name ?? "la ruta seleccionada"}.`, sound: "¡Vamos!", icon: "🛣️" },
+    { title: "Condiciones", text: currentObstacles.length ? currentObstacles.map((item) => OBSTACLE_LABELS[item]).join(", ") : "Recorrido sin obstáculos críticos.", sound: currentObstacles.includes("traffic") ? "¡Atasco!" : "¡Fluye!", icon: "⚠️" },
+    { title: "Evento", text: tripEvent?.description ?? "No apareció un evento inesperado relevante.", sound: tripEvent?.onomatopoeia ?? "¡Controlado!", icon: "💥" },
+    { title: "Llegada", text: `Destino: ${level.emergencyLabel}.`, sound: "¡Llegamos!", icon: "🏁" }
+  ];
 
   return (
     <main className="game-layout">
@@ -278,9 +370,14 @@ export function GameMap({
             <path
               key={route.id}
               d={pathD(nodes)}
-              className="route-option"
+              className={`route-option ${selectedRouteId === route.id ? "selected" : selectedRouteId ? "dimmed" : ""}`}
               style={{ stroke: route.color }}
-              onClick={() => !isAnimating && animateAndFinish(nodes, route.name)}
+              onClick={() => {
+                if (isAnimating) return;
+                setSelectedRouteId(route.id);
+                setInvalid("");
+                onBeep("select");
+              }}
             />
           ))}
           {level.manualRouting && manualPath.length > 1 ? <path d={pathD(manualPath)} className="manual-path" /> : null}
@@ -297,12 +394,57 @@ export function GameMap({
                 </text>
               </g>
             ))}
-          {obstacleMarkers.map((marker) => (
-            <ObstacleMarker key={marker.key} type={marker.type} point={marker.point} />
-          ))}
+          {obstacleMarkers.map((marker) => <g key={marker.key} className={selectedRouteId && !currentObstacles.includes(marker.type) ? "obstacle-dimmed" : ""}><ObstacleMarker type={marker.type} point={marker.point} /></g>)}
           <EmergencyMarker level={level} />
           <FireTruck position={truckPoint} label={selectedTruckData?.icon ?? "B"} active dragging={dragging} />
         </svg>
+        {isAnimating ? (
+          <div className="comic-simulation" aria-live="polite">
+            <div className="comic-strip">
+              {comicPanels.map((panel, index) => (
+                <article className={`comic-panel ${index === comicStage ? "active" : index < comicStage ? "done" : ""}`} key={panel.title}>
+                  <span className="comic-icon">{panel.icon}</span>
+                  <div>
+                    <strong>{panel.sound}</strong>
+                    <small>{panel.title}</small>
+                    <p>{panel.text}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+            {awaitingDecision ? (
+              <div className="event-decision">
+                <strong>{tripEvent?.label}</strong>
+                <span>Decide cómo responder al evento.</span>
+                <div className="action-row">
+                  <button className="primary" type="button" onClick={() => pendingFinish?.()}>Continuar ruta</button>
+                  <button className="secondary" type="button" onClick={() => {
+                    if (currentEvent.current) {
+                      currentEvent.current = { ...currentEvent.current, timeModifier: Math.max(-3, currentEvent.current.timeModifier - 2), label: "Recorrido recalculado" };
+                      currentTravelTime.current = Math.max(1, Math.round((currentTravelTime.current - 2) * 10) / 10);
+                      setTripEvent(currentEvent.current);
+                    }
+                    pendingFinish?.();
+                  }}>Cambiar recorrido</button>
+                  <button className="secondary" type="button" onClick={() => {
+                    if (currentEvent.current) {
+                      currentEvent.current = { ...currentEvent.current, timeModifier: Math.max(-4, currentEvent.current.timeModifier - 3), label: "Desvío tomado" };
+                      currentTravelTime.current = Math.max(1, Math.round((currentTravelTime.current - 3) * 10) / 10);
+                      setTripEvent(currentEvent.current);
+                    }
+                    pendingFinish?.();
+                  }}>Tomar desvío</button>
+                </div>
+              </div>
+            ) : null}
+            <button className="secondary skip-animation" type="button" onClick={() => {
+              if (!selectedPath.length) return;
+              timers.current.forEach(window.clearTimeout);
+              timers.current = [];
+              completeDispatch(selectedPath, level.manualRouting ? "Ruta construida" : selectedRoute?.route.name ?? "Ruta seleccionada", currentTravelTime.current || Math.max(travelTime, travelTimeWithUncertainty(level, selectedPath, selectedTruckData, currentEvent.current)), currentEvent.current);
+            }}>Omitir animación</button>
+          </div>
+        ) : null}
       </section>
 
       <aside className="side-panel" aria-label="Panel de decisiones">
@@ -337,7 +479,7 @@ export function GameMap({
               >
                 <ShieldAlert aria-hidden="true" />
                 <span>{truck.name}</span>
-                <small>{truck.status === "available" ? `${truck.preparationTime}s prep.` : OBSTACLE_LABELS.busy}</small>
+                <small>{truck.status === "available" ? `${truck.speed}/10 vel. · ${truck.preparationTime}s prep.` : OBSTACLE_LABELS.busy}</small>
               </button>
             ))}
         </div>
@@ -349,15 +491,38 @@ export function GameMap({
               <button
                 key={route.id}
                 type="button"
-                className="route-button"
+                className={`route-button ${selectedRouteId === route.id ? "selected" : ""}`}
                 style={{ borderColor: route.color }}
                 disabled={isAnimating}
-                onClick={() => animateAndFinish(nodes, route.name)}
+                onClick={() => {
+                  setSelectedRouteId(route.id);
+                  setInvalid("");
+                  onBeep("select");
+                }}
               >
                 <span>{route.name}</span>
                 <small>{route.hint}</small>
+                {selectedRouteId === route.id ? (
+                  <div className="route-conditions">
+                    <strong>Condiciones de la ruta</strong>
+                    <div>
+                      {collectObstacles(nodes, level.weather).length
+                        ? collectObstacles(nodes, level.weather).map((item) => <em key={item}>{OBSTACLE_LABELS[item]}</em>)
+                        : <em>Sin obstáculos importantes</em>}
+                    </div>
+                  </div>
+                ) : null}
               </button>
             ))}
+            <button
+              className="primary dispatch-button"
+              type="button"
+              disabled={!canDispatch || isAnimating}
+              onClick={() => selectedRoute && animateAndFinish(selectedRoute.nodes, selectedRoute.route.name)}
+            >
+              <Send aria-hidden="true" />
+              Despachar carro
+            </button>
           </div>
         ) : (
           <div className="manual-actions">
@@ -368,11 +533,11 @@ export function GameMap({
             <button
               className="primary"
               type="button"
-              disabled={!manualComplete || isAnimating}
+              disabled={!canDispatch || isAnimating}
               onClick={() => animateAndFinish(manualPath, "Ruta construida")}
             >
               <Send aria-hidden="true" />
-              ¡Enviar carro!
+              Despachar carro
             </button>
             <button
               className="secondary"
