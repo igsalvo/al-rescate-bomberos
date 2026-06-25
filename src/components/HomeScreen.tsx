@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, BrainCircuit, Sparkles, Target, Users, Wifi } from "lucide-react";
+import { ArrowRight, BrainCircuit, Sparkles, Target, Trophy, Users, Wifi } from "lucide-react";
 import { games, type GameDefinition } from "../config/games";
 import { platform } from "../config/platform";
 import { PlatformHeader } from "./PlatformHeader";
@@ -18,14 +18,14 @@ function GameCard({ game, onPlay }: { game: GameDefinition; onPlay: () => void }
   </article>;
 }
 
-export function HomeScreen({ sound, onSound, onPlay, onMultiplayer }: { sound: boolean; onSound: (value: boolean) => void; onPlay: (game: GameDefinition) => void; onMultiplayer: () => void }) {
+export function HomeScreen({ sound, onSound, onPlay, onMultiplayer, onSimulation }: { sound: boolean; onSound: (value: boolean) => void; onPlay: (game: GameDefinition) => void; onMultiplayer: () => void; onSimulation: () => void }) {
   const [filter, setFilter] = useState("Todos");
   const visible = useMemo(() => games.filter(game => filter === "Todos" || game.categories.includes(filter)), [filter]);
   return <div className="catalog-page">
     <PlatformHeader sound={sound} onSound={onSound} />
     <main>
       <section className="catalog-hero">
-        <div className="hero-copy"><p className="hero-kicker"><Sparkles size={16} /> Aprende jugando y experimentando</p><h1>{platform.name}</h1><p>{platform.subtitle}</p><small>{platform.intro}</small><div className="hero-actions"><a href="#juegos" className="hero-action">Jugar individual <ArrowRight size={18} /></a><button type="button" className="multiplayer-action" onClick={onMultiplayer}><Wifi size={18}/> Crear o unirme a una partida</button></div><div className="hero-benefits"><span><BrainCircuit/>Decisiones reales</span><span><Target/>Resultados inmediatos</span><span><Users/>Para jugar solo o en grupo</span></div></div>
+        <div className="hero-copy"><p className="hero-kicker"><Sparkles size={16} /> Aprende jugando y experimentando</p><h1>{platform.name}</h1><p>{platform.subtitle}</p><small>{platform.intro}</small><div className="hero-actions"><a href="#juegos" className="hero-action">Jugar individual <ArrowRight size={18} /></a><button type="button" className="multiplayer-action" onClick={onMultiplayer}><Wifi size={18}/> Crear o unirme a una partida</button><button type="button" className="simulation-action" onClick={onSimulation}><Trophy size={18}/> Simulación presencial</button></div><div className="hero-benefits"><span><BrainCircuit/>Decisiones reales</span><span><Target/>Resultados inmediatos</span><span><Users/>Para jugar solo o en grupo</span></div></div>
         <div className="hero-brand"><img src="/logo-ingenieria-industrial.png" alt="Ingeniería Industrial, Universidad de Chile" /><div><strong>10</strong><span>experiencias interactivas</span></div></div>
       </section>
       <section className="catalog-section" id="juegos" aria-labelledby="games-title"><div className="section-heading"><div><p>Catálogo interactivo</p><h2 id="games-title">¿Qué quieres resolver hoy?</h2><small>Todos los desafíos incluyen instrucciones y resultados explicados.</small></div><span>{visible.length} juegos disponibles</span></div>

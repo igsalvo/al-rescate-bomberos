@@ -6,6 +6,7 @@ import { GameMap } from "./components/GameMap";
 import { HomeScreen } from "./components/HomeScreen";
 import { LevelResult } from "./components/LevelResult";
 import { PlatformHeader } from "./components/PlatformHeader";
+import { SimulationMode } from "./components/SimulationMode";
 import { StartScreen } from "./components/StartScreen";
 import { gameBySlug, games, type GameDefinition } from "./config/games";
 import { levels } from "./game/levels";
@@ -45,7 +46,9 @@ export default function App() {
   useEffect(()=>{if(!room?.gameId||room.version===roomVersion.current)return;roomVersion.current=room.version;const game=games.find(item=>item.id===room.gameId);if(game)navigate(`/juegos/${game.slug}`);},[room?.gameId,room?.version]);
   const goHome = () => navigate("/");
   const chooseGame=async(game:GameDefinition)=>{if(room&&room.hostId!==playerId){setMultiplayerOpen(true);return;}if(room)await startGame(game.id);navigate(`/juegos/${game.slug}`);};
-  if (path === "/") return <><RoomBar/><HomeScreen sound={audio.enabled} onSound={audio.setSound} onPlay={chooseGame} onMultiplayer={()=>setMultiplayerOpen(true)} /><MultiplayerPanel open={multiplayerOpen} onClose={()=>setMultiplayerOpen(false)}/></>;
+  if (path === "/") return <><RoomBar/><HomeScreen sound={audio.enabled} onSound={audio.setSound} onPlay={chooseGame} onMultiplayer={()=>setMultiplayerOpen(true)} onSimulation={() => navigate("/simulaciones")} /><MultiplayerPanel open={multiplayerOpen} onClose={()=>setMultiplayerOpen(false)}/></>;
+  const simulationMatch = path.match(/^\/simulaciones(?:\/([^/]+))?\/?$/);
+  if (simulationMatch) return <SimulationMode slug={simulationMatch[1]} audio={audio} onHome={goHome} />;
   const match = path.match(/^\/juegos\/([^/]+)\/?$/); const selected = match ? gameBySlug(match[1]) : undefined;
   if (!selected || !selected.enabled) return <main className="not-found"><h1>Juego no disponible</h1><button className="primary" onClick={goHome}>Volver al catálogo</button></main>;
   if (selected.id === "bomberos") return <><RoomBar gameId={selected.id}/><BomberosGame audio={audio} onCatalog={goHome} /></>;
