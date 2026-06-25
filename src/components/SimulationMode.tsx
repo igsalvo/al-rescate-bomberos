@@ -3,7 +3,7 @@ import { ArrowLeft, Medal, Play, Plus, RotateCcw, Trophy, Users } from "lucide-r
 import { gameBySlug, games, type GameDefinition } from "../config/games";
 import { gameInstructions } from "../config/instructions";
 import { levels } from "../game/levels";
-import type { LevelResultData } from "../game/types";
+import type { Difficulty, LevelResultData } from "../game/types";
 import { useAudio } from "../hooks/useAudio";
 import { useGameState } from "../hooks/useGameState";
 import { useReducedMotion } from "../hooks/useReducedMotion";
@@ -11,6 +11,7 @@ import { navigate } from "../lib/router";
 import { DifficultySelector } from "./DifficultySelector";
 import { EducationalGame, type EducationalResult } from "./EducationalGame";
 import { FinalResult } from "./FinalResult";
+import { GameDifficultySelector, type EducationalDifficulty } from "./GameDifficultySelector";
 import { GameMap } from "./GameMap";
 import { InstructionModal } from "./InstructionModal";
 import { LevelResult } from "./LevelResult";
@@ -25,13 +26,13 @@ type SimulationEntry = {
   detail: string;
 };
 
-function storageKey(gameId: string) {
-  return `presential-simulation:${gameId}`;
+function storageKey(gameId: string, difficulty: EducationalDifficulty) {
+  return `presential-simulation:${gameId}:${difficulty}`;
 }
 
-function loadEntries(gameId: string) {
+function loadEntries(gameId: string, difficulty: EducationalDifficulty) {
   try {
-    const raw = window.localStorage.getItem(storageKey(gameId));
+    const raw = window.localStorage.getItem(storageKey(gameId, difficulty));
     return raw ? JSON.parse(raw) as SimulationEntry[] : [];
   } catch {
     return [];
@@ -103,7 +104,13 @@ function Podium({ entries, onClose }: { entries: SimulationEntry[]; onClose: () 
   </div>;
 }
 
-function BomberosSimulationGame({ audio, onCatalog, onResult }: { audio: ReturnType<typeof useAudio>; onCatalog: () => void; onResult: (result: EducationalResult) => void }) {
+const difficultyToBomberosLevel: Record<EducationalDifficulty, Difficulty> = {
+  easy: "explorador",
+  medium: "operador",
+  hard: "comandante"
+};
+
+function BomberosSimulationGame({ audio, difficulty, onCatalog, onResult }: { audio: ReturnType<typeof useAudio>; difficulty: EducationalDifficulty; onCatalog: () => void; onResult: (result: EducationalResult) => void }) {
   const game = useGameState();
   const reducedMotion = useReducedMotion();
   const [instructionsOpen, setInstructionsOpen] = useState(true);
@@ -126,31 +133,47 @@ function BomberosSimulationGame({ audio, onCatalog, onResult }: { audio: ReturnT
   if (game.screen === "playing") return wrap(<GameMap key={game.level.id} level={game.level} soundEnabled={audio.enabled} setSoundEnabled={audio.setSound} onBeep={audio.beep} startSiren={audio.startSiren} stopSiren={audio.stopSiren} reducedMotion={reducedMotion} onBack={onCatalog} onRestart={game.resetAll} onFinish={(params) => game.finishLevel({ ...params, level: game.level })} />);
   if (game.screen === "levelResult" && game.latestResult) return wrap(<><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onCatalog} onRestart={game.resetAll} /><LevelResult result={game.latestResult} hasNext={game.completeRun && game.results.length < levels.length} onNext={game.nextLevel} onRetry={game.retryLevel} onHome={onCatalog} /></>);
   if (game.screen === "finalResult") return wrap(<><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onCatalog} onRestart={game.resetAll} /><FinalResult results={game.results as LevelResultData[]} totals={game.totals} onRestart={game.startComplete} onHome={onCatalog} /></>);
-  return wrap(<div className="with-floating-back"><button className="floating-back" type="button" onClick={onCatalog}>← Volver al panel</button><StartScreen onStart={() => { audio.ensureAudio(); audio.beep("alarm"); game.startComplete(); }} /></div>);
+  return wrap(<div className="with-floating-back"><button className="floating-back" type="button" onClick={onCatalog}>← Volver al panel</button><StartScreen onStart={() => { audio.ensureAudio(); audio.beep("alarm"); game.chooseDifficulty(difficultyToBomberosLevel[difficulty]); }} /></div>);
 }
 
 export function SimulationMode({ slug, audio, onHome }: { slug?: string; audio: ReturnType<typeof useAudio>; onHome: () => void }) {
   const selected = slug ? gameBySlug(slug) : undefined;
-  const [entries, setEntries] = useState<SimulationEntry[]>(() => selected ? loadEntries(selected.id) : []);
+  const [activityDifficulty, setActivityDifficulty] = useState<EducationalDifficulty | null>(null);
+  const [entries, setEntries] = useState<SimulationEntry[]>([]);
   const [participantName, setParticipantName] = useState("");
   const [activeRun, setActiveRun] = useState<{ id: string; name: string } | null>(null);
   const [runKey, setRunKey] = useState(0);
   const [showPodium, setShowPodium] = useState(false);
   const recorded = useRef(new Set<string>());
+  const skipNextPersist = useRef(false);
 
   useEffect(() => {
     if (!selected) return;
-    const next = loadEntries(selected.id);
-    setEntries(next);
+    setEntries([]);
+    setActivityDifficulty(null);
     setActiveRun(null);
     setParticipantName("");
     setShowPodium(false);
-    recorded.current = new Set(next.map((entry) => entry.id));
+    recorded.current = new Set();
+    skipNextPersist.current = false;
   }, [selected?.id]);
 
   useEffect(() => {
-    if (selected) window.localStorage.setItem(storageKey(selected.id), JSON.stringify(entries));
-  }, [entries, selected]);
+    if (!selected || !activityDifficulty) return;
+    const next = loadEntries(selected.id, activityDifficulty);
+    setEntries(next);
+    recorded.current = new Set(next.map((entry) => entry.id));
+    skipNextPersist.current = true;
+  }, [activityDifficulty, selected]);
+
+  useEffect(() => {
+    if (!selected || !activityDifficulty) return;
+    if (skipNextPersist.current) {
+      skipNextPersist.current = false;
+      return;
+    }
+    window.localStorage.setItem(storageKey(selected.id, activityDifficulty), JSON.stringify(entries));
+  }, [activityDifficulty, entries, selected]);
 
   const sorted = useMemo(() => [...entries].sort((a, b) => b.score - a.score), [entries]);
   const startRun = () => {
@@ -183,6 +206,16 @@ export function SimulationMode({ slug, audio, onHome }: { slug?: string; audio: 
 
   if (!selected) return <div className="catalog-page"><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onHome} /><GamePicker onChoose={(game) => navigate(`/simulaciones/${game.slug}`)} /></div>;
   if (!selected.enabled) return <main className="not-found"><h1>Juego no disponible</h1><button className="primary" onClick={() => navigate("/simulaciones")}>Volver a simulaciones</button></main>;
+  if (!activityDifficulty) return <div className="catalog-page">
+    <PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={() => navigate("/simulaciones")} />
+    <main className="simulation-console single-column">
+      <section className="simulation-setup">
+        <button type="button" className="back-link" onClick={() => navigate("/simulaciones")}><ArrowLeft size={18} aria-hidden="true" />Cambiar juego</button>
+        <div className="simulation-game-heading"><span>{selected.icon}</span><div><p className="eyebrow">Simulación presencial</p><h1>{selected.title}</h1><p>Elige la dificultad una vez. Todos los participantes jugarán exactamente con esa misma configuración.</p></div></div>
+        <GameDifficultySelector gameTitle={selected.title} onChoose={setActivityDifficulty} />
+      </section>
+    </main>
+  </div>;
 
   if (activeRun) return <div className={`game-page theme-${selected.id}`}>
     <div className="simulation-run-bar">
@@ -191,8 +224,8 @@ export function SimulationMode({ slug, audio, onHome }: { slug?: string; audio: 
       <button type="button" className="primary" onClick={nextParticipant} disabled={!entries.some((entry) => entry.id === activeRun.id)}><Plus aria-hidden="true" />Siguiente participante</button>
     </div>
     {selected.id === "bomberos"
-      ? <BomberosSimulationGame key={runKey} audio={audio} onCatalog={nextParticipant} onResult={record} />
-      : <><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={nextParticipant} /><EducationalGame key={runKey} game={selected} onHome={nextParticipant} onSimulationResult={record} /></>}
+      ? <BomberosSimulationGame key={runKey} audio={audio} difficulty={activityDifficulty} onCatalog={nextParticipant} onResult={record} />
+      : <><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={nextParticipant} /><EducationalGame key={runKey} game={selected} onHome={nextParticipant} fixedDifficulty={activityDifficulty} onSimulationResult={record} /></>}
   </div>;
 
   return <div className="catalog-page">
@@ -201,6 +234,7 @@ export function SimulationMode({ slug, audio, onHome }: { slug?: string; audio: 
       <section className="simulation-setup">
         <button type="button" className="back-link" onClick={() => navigate("/simulaciones")}><ArrowLeft size={18} aria-hidden="true" />Cambiar juego</button>
         <div className="simulation-game-heading"><span>{selected.icon}</span><div><p className="eyebrow">Simulación presencial</p><h1>{selected.title}</h1><p>{selected.fullDescription}</p></div></div>
+        <div className="activity-difficulty-lock"><strong>Dificultad fijada: {activityDifficulty === "easy" ? "Fácil" : activityDifficulty === "medium" ? "Medio" : "Difícil"}</strong><button type="button" className="secondary" disabled={entries.length > 0} onClick={() => setActivityDifficulty(null)}>Cambiar dificultad</button></div>
         <form className="participant-form" onSubmit={(event) => { event.preventDefault(); startRun(); }}>
           <label>Nombre del participante o equipo<input value={participantName} onChange={(event) => setParticipantName(event.target.value)} placeholder="Ej: Equipo Azul" autoFocus /></label>
           <button type="submit" className="primary" disabled={!participantName.trim()}><Play aria-hidden="true" />Entrar a simular</button>

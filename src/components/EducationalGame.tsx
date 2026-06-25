@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { GameDefinition } from "../config/games";
 import { championProbabilities, clampScore, energyTotal, fireSpreadFrames, hospitalImpact, optimalKnapsack, type FireCell } from "../game/common";
 import { CommonResult } from "./CommonResult";
@@ -12,7 +12,11 @@ import { HousingValuationGame } from "./HousingValuationGame";
 import { useMultiplayer } from "../multiplayer/MultiplayerContext";
 
 export type EducationalResult = { score: number; title: string; metrics: Array<[string, string | number]>; explanation: string };
-const fireBoard: FireCell[][] = [["forest","forest","nature","home","home"],["fire","forest","forest","forest","home"],["forest","nature","forest","forest","forest"],["nature","nature","forest","home","home"]];
+const fireDifficultyConfig = {
+  easy: { size: 10, fires: 2, breaks: 5, steps: 9 },
+  medium: { size: 15, fires: 4, breaks: 9, steps: 12 },
+  hard: { size: 20, fires: 6, breaks: 13, steps: 15 }
+} as const;
 const teams = [{ name: "Cóndores", attack: 92, defense: 72, form: 84 }, { name: "Pumas", attack: 76, defense: 90, form: 79 }, { name: "Faros", attack: 82, defense: 80, form: 91 }, { name: "Volcanes", attack: 88, defense: 69, form: 73 }];
 const services = [{ name: "Hospital", icon: "🏥", consumption: 32, essential: true }, { name: "Viviendas", icon: "🏘️", consumption: 24, essential: true }, { name: "Alumbrado", icon: "💡", consumption: 14, essential: false }, { name: "Escuela", icon: "🏫", consumption: 12, essential: false }, { name: "Comercio", icon: "🏪", consumption: 18, essential: false }, { name: "Transporte", icon: "🚇", consumption: 20, essential: true }];
 const spaceItems = [{ name: "Oxígeno", icon: "🫧", weight: 5, utility: 10 }, { name: "Robot", icon: "🤖", weight: 7, utility: 12 }, { name: "Panel solar", icon: "☀️", weight: 6, utility: 11 }, { name: "Kit científico", icon: "🧪", weight: 4, utility: 8 }, { name: "Antena", icon: "📡", weight: 3, utility: 7 }, { name: "Alimentos", icon: "🥫", weight: 5, utility: 9 }, { name: "Cámara", icon: "📷", weight: 2, utility: 4 }, { name: "Herramientas", icon: "🧰", weight: 6, utility: 8 }];
@@ -27,18 +31,20 @@ function useDelayedFinish(finish: (result: EducationalResult) => void) {
 export function EducationalGame({
   game,
   onHome,
+  fixedDifficulty,
   onSimulationResult
 }: {
   game: GameDefinition;
   onHome: () => void;
+  fixedDifficulty?: EducationalDifficulty;
   onSimulationResult?: (result: EducationalResult) => void;
 }) {
   const { submitScore } = useMultiplayer();
   const [run, setRun] = useState(0);
   const [result, setResult] = useState<EducationalResult | null>(null);
-  const [difficulty, setDifficulty] = useState<EducationalDifficulty | null>(null);
+  const [difficulty, setDifficulty] = useState<EducationalDifficulty | null>(fixedDifficulty ?? null);
   const [instructionsOpen,setInstructionsOpen]=useState(false);
-  const reset = () => { setResult(null); setDifficulty(null); setRun(value => value + 1); setInstructionsOpen(false); };
+  const reset = () => { setResult(null); setDifficulty(fixedDifficulty ?? null); setRun(value => value + 1); setInstructionsOpen(false); };
   const chooseDifficulty = (nextDifficulty: EducationalDifficulty) => { setDifficulty(nextDifficulty); setInstructionsOpen(true); };
   const finish = (next: EducationalResult) => {
     setResult(next);
@@ -54,7 +60,7 @@ export function EducationalGame({
 }
 
 function GameBody({ game, difficulty, finish }: { game: GameDefinition; difficulty: EducationalDifficulty; finish: (result: EducationalResult) => void }) {
-  if (game.id === "incendio") return <FireGame finish={finish} />;
+  if (game.id === "incendio") return <FireGame difficulty={difficulty} finish={finish} />;
   if (game.id === "formula-1") return <RaceStrategyGame finish={finish} />;
   if (game.id === "detective-datos") return <DetectiveGame difficulty={difficulty} finish={finish} />;
   if (game.id === "campeon") return <ChampionGame finish={finish} />;
@@ -65,17 +71,41 @@ function GameBody({ game, difficulty, finish }: { game: GameDefinition; difficul
   return <HospitalGame finish={finish} />;
 }
 
-function FireGame({ finish }: { finish: (result: EducationalResult) => void }) {
+function createFireBoard(difficulty: EducationalDifficulty) {
+  const config = fireDifficultyConfig[difficulty];
+  const fireSeeds = {
+    easy: [[2, 2], [7, 6]],
+    medium: [[2, 3], [11, 3], [4, 11], [12, 10]],
+    hard: [[3, 3], [10, 4], [16, 6], [5, 14], [13, 15], [17, 17]]
+  }[difficulty];
+  const fireKeys = new Set(fireSeeds.map(([x, y]) => `${x},${y}`));
+  const board = Array.from({ length: config.size }, (_, y) =>
+    Array.from({ length: config.size }, (_, x): FireCell => {
+      if (fireKeys.has(`${x},${y}`)) return "fire";
+      if ((x + y * 2) % 11 === 0 || (x * 3 + y) % 17 === 0) return "home";
+      if ((x * 2 + y * 5) % 9 === 0) return "nature";
+      return "forest";
+    })
+  );
+  return { board, config };
+}
+
+function FireGame({ difficulty, finish }: { difficulty: EducationalDifficulty; finish: (result: EducationalResult) => void }) {
+  const { board: fireBoard, config } = createFireBoard(difficulty);
   const [breaks, setBreaks] = useState(new Set<string>());
   const [simulating, setSimulating] = useState(false);
-  const [burning, setBurning] = useState(new Set(["0,1"]));
+  const [burning, setBurning] = useState(() => {
+    const initial = new Set<string>();
+    fireBoard.forEach((row, y) => row.forEach((cell, x) => { if (cell === "fire") initial.add(`${x},${y}`); }));
+    return initial;
+  });
   const [wave, setWave] = useState(0);
   const finishAfter = useDelayedFinish(finish);
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach(window.clearTimeout), []);
-  const toggle = (key: string) => setBreaks(current => { const next = new Set(current); if (next.has(key)) next.delete(key); else if (next.size < 4) next.add(key); return next; });
-  const simulate = () => { setSimulating(true); const frames=fireSpreadFrames(fireBoard,breaks,6); frames.forEach((frame,index)=>timers.current.push(window.setTimeout(()=>{setBurning(frame);setWave(index);},index*620))); const burned=frames[frames.length-1]; let homes=0,nature=0;fireBoard.forEach((row,y)=>row.forEach((cell,x)=>{if(!burned.has(`${x},${y}`)&&cell==="home")homes++;if(!burned.has(`${x},${y}`)&&cell==="nature")nature++;}));const score=clampScore(420+homes*80+nature*55);finishAfter({score,title:score>=800?"Buena ubicación":"Prueba otra estrategia",metrics:[["Viviendas protegidas",homes],["Áreas naturales protegidas",nature],["Superficie afectada",`${burned.size} zonas`],["Referencia","4 cortafuegos bien distribuidos"]],explanation:"Viste la propagación por oleadas: cada cortafuego cortó conexiones y cambió el frente del incendio."},frames.length*620+700); };
-  return <section className={`play-panel fire-simulation ${simulating ? "running" : ""}`}><div className="panel-heading"><div><h2>{simulating?`Frente de fuego · minuto ${wave+1}`:"Ubica 4 cortafuegos"}</h2><p>{simulating?"El viento empuja las llamas hacia el este →":"Viento hacia el este →. Selecciona celdas antes de iniciar."}</p></div><span>{simulating?`🔥 ${burning.size}`:`${breaks.size}/4`}</span></div><div className="wind-stream" aria-hidden="true"><i/><i/><i/><span>VIENTO</span></div><div className="fire-board">{fireBoard.flatMap((row,y)=>row.map((cell,x)=>{const key=`${x},${y}`;const isBurning=burning.has(key);return <button type="button" disabled={simulating} aria-label={`${cell}, ${breaks.has(key)?"con":"sin"} cortafuego`} className={`${cell} ${breaks.has(key)?"firebreak":""} ${simulating&&isBurning?"burning":""} ${simulating&&!isBurning?"protected":""}`} onClick={()=>cell!=="fire"&&toggle(key)} key={key}>{breaks.has(key)?"🧱":isBurning?"🔥":cell==="home"?"🏠":cell==="nature"?"🦌":"🌲"}<small>{isBurning&&simulating?"Afectada":breaks.has(key)?"Bloqueo":""}</small></button>;}))}</div><div className="fire-legend"><span>🔥 Frente activo</span><span>🧱 Cortafuego</span><span>✨ Zona protegida</span></div><div className="decision-footer"><span>{simulating?`Propagación ${Math.min(100,Math.round((wave+1)/6*100))}%`:`${4-breaks.size} piezas disponibles`}</span><button className="primary" disabled={breaks.size<3||simulating} onClick={simulate}>{simulating?"Simulando expansión…":"Iniciar simulación"}</button></div></section>;
+  const toggle = (key: string) => setBreaks(current => { const next = new Set(current); if (next.has(key)) next.delete(key); else if (next.size < config.breaks) next.add(key); return next; });
+  const simulate = () => { setSimulating(true); const frames=fireSpreadFrames(fireBoard,breaks,config.steps); frames.forEach((frame,index)=>timers.current.push(window.setTimeout(()=>{setBurning(frame);setWave(index);},index*260))); const burned=frames[frames.length-1]; let homes=0,nature=0,totalHomes=0,totalNature=0;fireBoard.forEach((row,y)=>row.forEach((cell,x)=>{if(cell==="home")totalHomes++;if(cell==="nature")totalNature++;if(!burned.has(`${x},${y}`)&&cell==="home")homes++;if(!burned.has(`${x},${y}`)&&cell==="nature")nature++;}));const protectedRatio=(homes+nature)/Math.max(1,totalHomes+totalNature);const spreadPenalty=Math.max(0,burned.size-config.fires)*4;const score=clampScore(340+protectedRatio*610-spreadPenalty+breaks.size*4);finishAfter({score,title:score>=800?"Buena ubicación":"Prueba otra estrategia",metrics:[["Viviendas protegidas",`${homes}/${totalHomes}`],["Áreas naturales protegidas",`${nature}/${totalNature}`],["Superficie afectada",`${burned.size} zonas`],["Focos iniciales",config.fires]],explanation:"Viste la propagación por oleadas: hay menos cortafuegos que perímetro necesario para aislar todos los focos, por lo que siempre habrá expansión y la decisión está en reducir el daño."},frames.length*260+700); };
+  return <section className={`play-panel fire-simulation fire-size-${config.size} ${simulating ? "running" : ""}`}><div className="panel-heading"><div><h2>{simulating?`Frente de fuego · minuto ${wave+1}`:`Ubica ${config.breaks} cortafuegos`}</h2><p>{simulating?"El viento empuja las llamas hacia el este →":`${config.size}x${config.size} · ${config.fires} focos activos. Los cortafuegos no alcanzan para aislar todo: decide qué proteger.`}</p></div><span>{simulating?`🔥 ${burning.size}`:`${breaks.size}/${config.breaks}`}</span></div><div className="wind-stream" aria-hidden="true"><i/><i/><i/><span>VIENTO</span></div><div className="fire-board large-fire-board" style={{"--fire-cols": config.size} as CSSProperties}>{fireBoard.flatMap((row,y)=>row.map((cell,x)=>{const key=`${x},${y}`;const isBurning=burning.has(key);return <button type="button" disabled={simulating} aria-label={`${cell}, ${breaks.has(key)?"con":"sin"} cortafuego`} className={`${cell} ${breaks.has(key)?"firebreak":""} ${simulating&&isBurning?"burning":""} ${simulating&&!isBurning?"protected":""}`} onClick={()=>cell!=="fire"&&toggle(key)} key={key}>{breaks.has(key)?"🧱":isBurning?"🔥":cell==="home"?"🏠":cell==="nature"?"🦌":"🌲"}<small>{isBurning&&simulating?"Afectada":breaks.has(key)?"Bloqueo":""}</small></button>;}))}</div><div className="fire-legend"><span>🔥 Frente activo</span><span>🧱 Cortafuego limitado</span><span>✨ Zona protegida</span></div><div className="decision-footer"><span>{simulating?`Propagación ${Math.min(100,Math.round((wave+1)/config.steps*100))}%`:`${config.breaks-breaks.size} cortafuegos disponibles`}</span><button className="primary" disabled={breaks.size<Math.ceil(config.breaks*.6)||simulating} onClick={simulate}>{simulating?"Simulando expansión…":"Iniciar simulación"}</button></div></section>;
 }
 
 function ChampionGame({ finish }: { finish: (result: EducationalResult) => void }) {
