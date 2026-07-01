@@ -20,6 +20,7 @@ import "./styles/global.css";
 import { MultiplayerPanel } from "./components/MultiplayerPanel";
 import { RoomBar } from "./components/RoomBar";
 import { useMultiplayer } from "./multiplayer/MultiplayerContext";
+import { WildfirePreventionGame } from "./components/wildfire/WildfirePreventionGame";
 
 function BomberosGame({ audio, onCatalog }: { audio: ReturnType<typeof useAudio>; onCatalog: () => void }) {
   const game = useGameState();
@@ -52,5 +53,6 @@ export default function App() {
   const match = path.match(/^\/juegos\/([^/]+)\/?$/); const selected = match ? gameBySlug(match[1]) : undefined;
   if (!selected || !selected.enabled) return <main className="not-found"><h1>Juego no disponible</h1><button className="primary" onClick={goHome}>Volver al catálogo</button></main>;
   if (selected.id === "bomberos") return <><RoomBar gameId={selected.id}/><BomberosGame audio={audio} onCatalog={goHome} /></>;
+  if (selected.id === "incendio") return <><RoomBar gameId={selected.id}/><div className="game-page theme-incendio"><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={goHome} /><WildfirePreventionGame onHome={goHome} /></div></>;
   return <><RoomBar gameId={selected.id}/><div className={`game-page theme-${selected.id}`}><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={goHome} /><EducationalGame game={selected} onHome={goHome} /></div></>;
 }

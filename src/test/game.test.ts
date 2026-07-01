@@ -6,6 +6,9 @@ import { games } from "../config/games";
 import { gameInstructions } from "../config/instructions";
 import { housingExamples, housingRounds } from "../config/housing";
 import { championProbabilities, energyTotal, fireSpreadFrames, hospitalImpact, optimalKnapsack, scoreToStars, spreadFire } from "../game/common";
+import { createDefaultGrid, createDefaultScenario } from "../wildfire/config";
+import { chooseIgnitions, runWildfireSimulation } from "../wildfire/simulation";
+import type { LockedScenario, TeamStrategy } from "../wildfire/types";
 
 describe("calculo de tiempos", () => {
   it("aplica penalizaciones por trafico y trabajos", () => {
@@ -95,6 +98,31 @@ describe("ruta optima", () => {
     expect(result.nodes[result.nodes.length - 1]).toBe("n");
     expect(result.time).toBeGreaterThan(0);
     expect(result.nodes.join("-")).not.toContain("h-m");
+  });
+});
+
+describe("motor del simulador de incendios forestales", () => {
+  it("elige focos solo desde celdas elegibles cuando existen", () => {
+    const grid = createDefaultGrid().map((cell) => cell.coordinate === "A1" || cell.coordinate === "B2" ? { ...cell, ignitionEligible: true } : cell);
+    expect(chooseIgnitions(grid, 2)).toEqual(["0,0", "1,1"]);
+  });
+
+  it("propaga el fuego por rondas y respeta cortafuegos", () => {
+    const scenario: LockedScenario = { ...createDefaultScenario(), ignitionCells: ["0,0"], locked: true, lockedAt: "2026-07-01T00:00:00.000Z", rounds: 4, wind: "E" };
+    const strategy: TeamStrategy = { firebreaks: ["0,1"], justification: "Bloquear avance principal con viento este.", locked: true };
+    const result = runWildfireSimulation(scenario, strategy);
+    const lastFrame = result.frames[result.frames.length - 1];
+    const affected = new Set([...lastFrame.burned, ...lastFrame.burning]);
+    expect(affected.has("0,1")).toBe(false);
+    expect(result.frames.length).toBeGreaterThan(1);
+  });
+
+  it("prioriza valor protegido de ciudad e infraestructura en el puntaje", () => {
+    const grid = createDefaultGrid().map((cell) => cell.coordinate === "A2" ? { ...cell, terrain: "city" as const } : cell);
+    const scenario: LockedScenario = { ...createDefaultScenario(), grid, ignitionCells: ["0,0"], locked: true, lockedAt: "2026-07-01T00:00:00.000Z", rounds: 1, wind: "E" };
+    const open = runWildfireSimulation(scenario, { firebreaks: [], justification: "", locked: true });
+    const protectedRun = runWildfireSimulation(scenario, { firebreaks: ["0,1"], justification: "", locked: true });
+    expect(protectedRun.score).toBeGreaterThan(open.score);
   });
 });
 
