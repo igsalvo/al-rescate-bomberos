@@ -17,6 +17,7 @@ import { InstructionModal } from "./InstructionModal";
 import { LevelResult } from "./LevelResult";
 import { PlatformHeader } from "./PlatformHeader";
 import { StartScreen } from "./StartScreen";
+import { WildfirePreventionGame } from "./wildfire/WildfirePreventionGame";
 
 type SimulationEntry = {
   id: string;
@@ -206,6 +207,10 @@ export function SimulationMode({ slug, audio, onHome }: { slug?: string; audio: 
 
   if (!selected) return <div className="catalog-page"><PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={onHome} /><GamePicker onChoose={(game) => navigate(`/simulaciones/${game.slug}`)} /></div>;
   if (!selected.enabled) return <main className="not-found"><h1>Juego no disponible</h1><button className="primary" onClick={() => navigate("/simulaciones")}>Volver a simulaciones</button></main>;
+  if (selected.id === "incendio") return <div className="game-page theme-incendio">
+    <PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={() => navigate("/simulaciones")} />
+    <WildfirePreventionGame onHome={() => navigate("/simulaciones")} />
+  </div>;
   if (!activityDifficulty) return <div className="catalog-page">
     <PlatformHeader sound={audio.enabled} onSound={audio.setSound} onBack={() => navigate("/simulaciones")} />
     <main className="simulation-console single-column">
