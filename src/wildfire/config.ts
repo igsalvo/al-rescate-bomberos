@@ -21,7 +21,7 @@ export function createDefaultGrid(): GridCell[] {
   });
 }
 
-export function createDefaultScenario(): ScenarioConfig {
+export function createDefaultScenario(overrides: Partial<ScenarioConfig> = {}): ScenarioConfig {
   return {
     grid: createDefaultGrid(),
     calibration: DEFAULT_CALIBRATION,
@@ -30,7 +30,8 @@ export function createDefaultScenario(): ScenarioConfig {
     firebreakBudget: 14,
     rounds: 10,
     wind: "E",
-    locked: false
+    locked: false,
+    ...overrides
   };
 }
 
