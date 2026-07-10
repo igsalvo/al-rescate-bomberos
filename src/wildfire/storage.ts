@@ -1,11 +1,8 @@
+import { createDefaultScenario } from "./config";
 import type { LockedScenario, ScenarioConfig, TeamStrategy } from "./types";
 
 const SCENARIO_KEY = "wildfire-prevention-scenario-v1";
 const STRATEGY_KEY = "wildfire-prevention-team-strategy-v1";
-
-function keyFor(baseKey: string, partId: string) {
-  return partId === "part-2" ? baseKey : `${baseKey}:${partId}`;
-}
 
 function readJson<T>(key: string): T | null {
   try {
@@ -16,23 +13,23 @@ function readJson<T>(key: string): T | null {
   }
 }
 
-export function loadScenario(partId: string, defaultScenario: ScenarioConfig): ScenarioConfig | LockedScenario {
-  return readJson<ScenarioConfig | LockedScenario>(keyFor(SCENARIO_KEY, partId)) ?? defaultScenario;
+export function loadScenario(): ScenarioConfig | LockedScenario {
+  return readJson<ScenarioConfig | LockedScenario>(SCENARIO_KEY) ?? createDefaultScenario();
 }
 
-export function saveScenario(partId: string, scenario: ScenarioConfig | LockedScenario) {
-  window.localStorage.setItem(keyFor(SCENARIO_KEY, partId), JSON.stringify(scenario));
+export function saveScenario(scenario: ScenarioConfig | LockedScenario) {
+  window.localStorage.setItem(SCENARIO_KEY, JSON.stringify(scenario));
 }
 
-export function resetScenarioStorage(partId: string) {
-  window.localStorage.removeItem(keyFor(SCENARIO_KEY, partId));
-  window.localStorage.removeItem(keyFor(STRATEGY_KEY, partId));
+export function resetScenarioStorage() {
+  window.localStorage.removeItem(SCENARIO_KEY);
+  window.localStorage.removeItem(STRATEGY_KEY);
 }
 
-export function loadStrategy(partId: string): TeamStrategy {
-  return readJson<TeamStrategy>(keyFor(STRATEGY_KEY, partId)) ?? { firebreaks: [], justification: "", locked: false };
+export function loadStrategy(): TeamStrategy {
+  return readJson<TeamStrategy>(STRATEGY_KEY) ?? { firebreaks: [], justification: "", locked: false };
 }
 
-export function saveStrategy(partId: string, strategy: TeamStrategy) {
-  window.localStorage.setItem(keyFor(STRATEGY_KEY, partId), JSON.stringify(strategy));
+export function saveStrategy(strategy: TeamStrategy) {
+  window.localStorage.setItem(STRATEGY_KEY, JSON.stringify(strategy));
 }
