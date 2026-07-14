@@ -19,6 +19,7 @@ const tools: Array<{ id: AdminTool; label: string }> = [
 ];
 
 const windOptions: WindDirection[] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+type CellInteraction = "start" | "move";
 
 function clamp01(value: number) {
   return Math.max(0, Math.min(1, value));
@@ -81,11 +82,12 @@ function GridOverlay({
   tool?: AdminTool;
   activeFrame?: SimulationResult["frames"][number];
   teamBreaks?: Set<string>;
-  onCell?: (key: string) => void;
+  onCell?: (key: string, interaction: CellInteraction) => void;
   onCalibration?: (corner: "start" | "end", point: { x: number; y: number }) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const [corner, setCorner] = useState<"start" | "end" | null>(null);
+  const lastCellKeyRef = useRef<string | null>(null);
   const rect = normalizeRect(scenario.calibration);
   const burning = new Set(activeFrame?.burning ?? []);
   const burned = new Set(activeFrame?.burned ?? []);
@@ -93,17 +95,26 @@ function GridOverlay({
   const breaks = teamBreaks ?? new Set<string>();
   const image = scenario.mapImage;
 
-  const handlePointer = (event: PointerEvent<SVGSVGElement>) => {
+  const handlePointer = (event: PointerEvent<SVGSVGElement>, interaction: CellInteraction) => {
     const point = pointFromEvent(event);
     if (corner && onCalibration) {
       onCalibration(corner, point);
       return;
     }
     const cell = cellFromPoint(scenario.calibration, point.x, point.y);
-    if (cell && onCell) onCell(cell.key);
+    if (cell && onCell && cell.key !== lastCellKeyRef.current) {
+      lastCellKeyRef.current = cell.key;
+      onCell(cell.key, interaction);
+    }
   };
 
-  return <svg className="wildfire-map-svg" viewBox="0 0 1 1" preserveAspectRatio="none" onPointerDown={(event) => { setDragging(true); handlePointer(event); }} onPointerMove={(event) => { if (dragging) handlePointer(event); }} onPointerUp={() => { setDragging(false); setCorner(null); }} onPointerLeave={() => { setDragging(false); setCorner(null); }}>
+  const stopDragging = () => {
+    setDragging(false);
+    setCorner(null);
+    lastCellKeyRef.current = null;
+  };
+
+  return <svg className="wildfire-map-svg" viewBox="0 0 1 1" preserveAspectRatio="none" onPointerDown={(event) => { setDragging(true); lastCellKeyRef.current = null; event.currentTarget.setPointerCapture(event.pointerId); handlePointer(event, "start"); }} onPointerMove={(event) => { if (dragging) handlePointer(event, "move"); }} onPointerUp={stopDragging} onPointerLeave={stopDragging}>
     {image ? <image href={image} x="0" y="0" width="1" height="1" preserveAspectRatio="none" /> : <><rect width="1" height="1" fill="#d9ead1" /><path d="M0 0.58 C0.22 0.48 0.42 0.7 0.63 0.58 S0.88 0.42 1 0.52" fill="none" stroke="#8c9f72" strokeWidth=".025" /></>}
     <rect x={rect.x1} y={rect.y1} width={rect.x2 - rect.x1} height={rect.y2 - rect.y1} fill="rgba(255,255,255,.08)" stroke="#f7c948" strokeWidth=".004" />
     {scenario.grid.map((cell) => {
@@ -195,17 +206,26 @@ function AdminMode({ scenario, setScenario, result, setResult }: { scenario: Sce
 function TeamMode({ scenario, result, setResult }: { scenario: ScenarioConfig | LockedScenario; result: SimulationResult | null; setResult: (result: SimulationResult | null) => void }) {
   const [strategy, setStrategy] = useState(loadStrategy);
   const [frame, setFrame] = useState(0);
+  const dragActionRef = useRef<"add" | "remove" | null>(null);
   const locked = isLockedScenario(scenario);
   const activeFrame = result?.frames[frame];
   const firebreaks = useMemo(() => new Set(strategy.firebreaks), [strategy.firebreaks]);
   useEffect(() => saveStrategy(strategy), [strategy]);
-  const toggleBreak = (key: string) => {
+  const toggleBreak = (key: string, interaction: CellInteraction) => {
     if (strategy.locked || !locked) return;
     const cell = scenario.grid.find((item) => cellKey(item.row, item.column) === key);
     if (!cell?.firebreakAllowed) return;
+    if (interaction === "start") {
+      dragActionRef.current = firebreaks.has(key) ? "remove" : "add";
+    }
     setStrategy((current) => {
       const next = new Set(current.firebreaks);
-      next.has(key) ? next.delete(key) : next.size < scenario.firebreakBudget && next.add(key);
+      const action = dragActionRef.current ?? (next.has(key) ? "remove" : "add");
+      if (action === "remove") {
+        next.delete(key);
+      } else if (!next.has(key) && next.size < scenario.firebreakBudget) {
+        next.add(key);
+      }
       return { ...current, firebreaks: [...next] };
     });
   };
